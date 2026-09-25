@@ -17,3 +17,5 @@ npm-debug.log*
 .vscode/settings.json
 .DS_Store
 Thumbs.db
+README.md
+
