@@ -145,13 +145,24 @@ async function vDash() {
   };
   drawSel();
 }
+const ICON = { router: '&#128752;', switch: '&#128268;', firewall: '&#128737;', server: '&#128421;', ap: '&#128246;', laptop: '&#128187;', phone: '&#128241;', tv: '&#128250;', printer: '&#128424;', iot: '&#128268;', host: '&#10068;' };
+const humanType = (t) => ({ laptop: 'Laptop/PC', phone: 'Handphone', tv: 'Smart TV', printer: 'Printer', router: 'Router', server: 'Server', ap: 'Access Point', iot: 'IoT', host: 'Host', switch: 'Switch', firewall: 'Firewall' }[t] || t);
 async function vDev() {
+  stopLive();
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat devices...</div>', 'dev');
   const d = await api('/api/devices');
   const canW2 = canW();
-  const form = canW2 ? '<div class="toolbar"><input id="dn" placeholder="Nama device"><input id="di" placeholder="IP address"><select id="dt"><option>router</option><option>switch</option><option>firewall</option><option>server</option><option>ap</option></select><button class="btn sm" onclick="addDev()">+ Tambah</button></div>' : '<p style="color:var(--mut)">Mode read-only (viewer)</p>';
-  const ico = { router: '&#128752;', switch: '&#128268;', firewall: '&#128737;', server: '&#128187;', ap: '&#128246;' };
-  document.getElementById('c').innerHTML = '<div class="panel"><h4>Devices <span class="sub">' + d.length + ' perangkat • ' + d.filter((x) => x.monitored).length + ' dipoll nyata</span></h4>' + form + '<table><tr><th>Device</th><th>Tipe</th><th>Status</th><th>Latency</th><th>Mode</th>' + (canW2 ? '<th>Aksi</th>' : '') + '</tr>' + d.map((x) => '<tr><td><b>' + (ico[x.type] || '&#128187;') + ' ' + esc(x.name) + '</b><br><span style="color:var(--mut)">' + esc(x.ip) + ' • ' + esc(x.vendor || '-') + '</span></td><td>' + esc(x.type) + '</td><td>' + pill(x.status) + '</td><td>' + (x.latency ?? '-') + ' ms</td><td>' + (x.monitored ? '<span class="pill up">MONITOR</span>' : '<span class="pill info">DEMO</span>') + '</td>' + (canW2 ? '<td><button class="btn sm ghost" onclick="toggleMon(' + x.id + ',' + (x.monitored ? 0 : 1) + ')">' + (x.monitored ? 'Matikan poll' : 'Aktifkan poll') + '</button> <button class="btn sm ghost danger" onclick="delDev(' + x.id + ')">Hapus</button></td>' : '') + '</tr>').join('') + '</table></div>';
+  const form = canW2 ? '<div class="toolbar"><input id="dn" placeholder="Nama device"><input id="di" placeholder="IP address"><select id="dt"><option>router</option><option>laptop</option><option>phone</option><option>server</option><option>switch</option><option>ap</option><option>printer</option><option>tv</option><option>firewall</option></select><button class="btn sm" onclick="addDev()">+ Tambah</button><button class="btn sm ghost" onclick="doIdentify()">&#128269; Deteksi nama perangkat</button></div>' : '<p style="color:var(--mut)">Mode read-only (viewer)</p>';
+  document.getElementById('c').innerHTML = '<div class="panel"><h4>Devices <span class="sub">' + d.length + ' perangkat • ' + d.filter((x) => x.monitored).length + ' dipoll nyata</span></h4>' + form + '<table><tr><th>Perangkat</th><th>Jenis</th><th>Vendor</th><th>MAC</th><th>Status</th><th>Latency</th>' + (canW2 ? '<th>Aksi</th>' : '') + '</tr>' + d.map((x) => '<tr><td><b>' + (ICON[x.type] || ICON.host) + ' ' + esc(x.name) + '</b><br><span style="color:var(--mut)">' + esc(x.ip) + (x.monitored ? '' : ' • DEMO') + '</span></td><td>' + esc(humanType(x.type)) + '</td><td>' + esc(x.vendor || '-') + '</td><td><span style="color:var(--mut);font-size:11px">' + esc(x.mac || '-') + '</span></td><td>' + pill(x.status) + '</td><td>' + (x.latency ?? '-') + ' ms</td>' + (canW2 ? '<td><button class="btn sm ghost" onclick="toggleMon(' + x.id + ',' + (x.monitored ? 0 : 1) + ')">' + (x.monitored ? 'Matikan poll' : 'Aktifkan poll') + '</button> <button class="btn sm ghost danger" onclick="delDev(' + x.id + ')">Hapus</button></td>' : '') + '</tr>').join('') + '</table></div>';
+}
+async function doIdentify() {
+  const c = document.getElementById('c');
+  c.innerHTML = '<div class="panel"><span class="spin"></span> Mendeteksi nama perangkat (NetBIOS/LLMNR/mDNS/ARP/port)...</div>';
+  try {
+    const r = await api('/api/devices/identify', { method: 'POST' });
+    toast(r.count + ' perangkat terdeteksi');
+    vDev();
+  } catch (e) { toast(e.message, false); vDev(); }
 }
 async function addDev() {
   try {
@@ -176,7 +187,7 @@ async function vTopo() {
   n.forEach((x, i) => { const a = (i / n.length) * Math.PI * 2; pos[x.id] = [400 + 280 * Math.cos(a), 205 + 155 * Math.sin(a)]; });
   const L = t.links.map((l) => { const a = pos[l.from] || [50, 50], b = pos[l.to] || [100, 100]; return '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#38bdf8" stroke-width="2" opacity=".7"/><text x="' + ((a[0] + b[0]) / 2) + '" y="' + ((a[1] + b[1]) / 2 - 4) + '" fill="#93a1c4" font-size="9" text-anchor="middle">' + esc(l.src_port || '') + '</text>'; }).join('');
   const real = n.filter((x) => x.monitored).length;
-  const N = n.map((x) => { const q = pos[x.id]; const col = x.status === 'up' ? '#22c55e' : x.status === 'down' ? '#ef4444' : '#f59e0b'; const r = x.monitored ? 26 : 20; return '<g><circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + r + '" fill="#0e1730" stroke="' + col + '" stroke-width="' + (x.monitored ? 4 : 2) + '"' + (x.monitored ? '' : ' opacity=".55"') + '/><circle cx="' + q[0] + '" cy="' + q[1] + '" r="7" fill="' + col + '"/><text x="' + q[0] + '" y="' + (q[1] + 42) + '" fill="#e8eefc" font-size="11" font-weight="bold" text-anchor="middle">' + esc(x.label) + '</text><text x="' + q[0] + '" y="' + (q[1] + 54) + '" fill="#93a1c4" font-size="9" text-anchor="middle">' + esc(x.ip) + (x.monitored ? ' ★' : '') + '</text></g>'; }).join('');
+  const N = n.map((x) => { const q = pos[x.id]; const col = x.status === 'up' ? '#22c55e' : x.status === 'down' ? '#ef4444' : '#f59e0b'; const r = x.monitored ? 26 : 18; const gl = { router: '&#128752;', laptop: '&#128187;', phone: '&#128241;', tv: '&#128250;', printer: '&#128424;' }[x.type] || '&#10068;'; return '<g><circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + r + '" fill="#0e1730" stroke="' + col + '" stroke-width="3"/><text x="' + q[0] + '" y="' + (q[1] + 6) + '" font-size="16" text-anchor="middle">' + gl + '</text><text x="' + q[0] + '" y="' + (q[1] + 40) + '" fill="#e8eefc" font-size="10" font-weight="bold" text-anchor="middle">' + esc(x.label) + '</text><text x="' + q[0] + '" y="' + (q[1] + 51) + '" fill="#93a1c4" font-size="9" text-anchor="middle">' + esc(x.ip) + '</text></g>'; }).join('');
   document.getElementById('c').innerHTML = '<div class="panel"><h4>Peta Topologi <span class="sub">' + n.length + ' nodes (' + real + ' nyata ★) • ' + t.links.length + ' links • hijau=up merah=down kuning=degraded</span></h4><svg id="topo" viewBox="0 0 800 420">' + L + N + '</svg></div>';
 }
 async function vAlerts() {

@@ -134,10 +134,20 @@ sock.on('message', (msg, rinfo) => {
   const text = msg.toString().slice(0, 1000);
   db.prepare('INSERT INTO events(source,facility,severity,message) VALUES (?,?,?,?)').run(rinfo.address, 'syslog', 'info', text);
 });
+// identifikasi perangkat LAN tiap 6 siklus (nama laptop/HP, MAC, vendor, tipe)
+let cycle = 0;
+async function pollCycle() {
+  cycle++;
+  await pollOnce();
+  if (cycle === 1 || cycle % 6 === 0) {
+    try { const { identifyAll } = require('./lib/identify'); const r = await identifyAll(); console.log(`[identify] ${r.length} perangkat diperbarui`); }
+    catch (e) { console.error('[identify] gagal', e.message); }
+  }
+}
 if (require.main === module) {
   sock.bind(SYSLOG_PORT, () => console.log(`[syslog] UDP :${SYSLOG_PORT}`));
-  pollOnce().catch(console.error);
-  setInterval(pollOnce, POLL_MS);
+  pollCycle().catch(console.error);
+  setInterval(() => pollCycle().catch(console.error), POLL_MS);
   console.log(`[poller] interval ${POLL_MS}ms`);
 }
-module.exports = { pollOnce, raiseAlert, notify, snmpWalk, remoteExec };
+module.exports = { pollOnce, pollCycle, raiseAlert, notify, snmpWalk, remoteExec };

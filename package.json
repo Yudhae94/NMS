@@ -7,6 +7,7 @@
     "start": "node server.js",
     "poller": "node poller.js",
     "add-local": "node scripts/add-local-devices.js",
+    "identify": "node scripts/identify-hosts.js",
     "cleanup-demo": "node scripts/cleanup-demo-alerts.js",
     "dev": "node server.js",
     "verify": "node scripts/verify.js"
