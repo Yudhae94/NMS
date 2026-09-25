@@ -1,0 +1,19 @@
+# runtime data (database time-series + WAL) — tidak di-commit
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# dependencies & log
+node_modules/
+*.log
+npm-debug.log*
+
+# environment rahasia
+.env
+.env.local
+
+# editor / OS
+.vscode/settings.json
+.DS_Store
+Thumbs.db
