@@ -414,7 +414,7 @@ function chanTable(band) {
 function ssidTable(ssids) {
   if (!ssids.length) return '<p class="hint">Belum ada nama WiFi tersimpan. Jalankan “Scan Kanal WiFi” — semua SSID tetangga yang masuk cache scan ikut tampil (bukan hanya yang terhubung).</p>';
   return '<table><tr><th>Nama WiFi (SSID)</th><th>Status</th><th>Band</th><th>Kanal</th><th>Sinyal</th><th>Keamanan</th><th>BSSID</th></tr>'
-    + ssids.map((g) => '<tr><td><b>' + esc(g.ssid) + '</b></td>'
+    + ssids.map((g) => '<tr><td class="ssid-cell" title="' + esc(g.ssid) + '"><b>' + esc(g.ssid) + '</b></td>'
       + '<td>' + (g.connected ? '<span class="pill up">TERHUBUNG</span>' : '<span class="pill info">' + g.count + ' AP terlihat</span>') + '</td>'
       + '<td>' + esc(g.bands) + ' GHz</td><td><b>' + esc(g.channels) + '</b></td>'
       + '<td>' + sigBars(barsOfSignal(g.strongest)) + ' ' + g.strongest + '%</td>'
@@ -453,8 +453,8 @@ function renderWifi(w) {
     + '<canvas id="' + id + '" style="width:100%"></canvas>'
     + '<p class="hint">Tinggi kurva = kekuatan sinyal (%), garis hijau = kanal rekomendasi. Lebar kanal diestimasi dari tipe radio karena netsh/nmcli tidak selalu melaporkannya.</p></div>';
   const toolbar = '<div class="panel"><h4>Discovery Kanal WiFi <span class="sub">band 2.4 GHz &amp; 5 GHz</span></h4><div class="toolbar" id="wifiBar">'
-    + (canW() ? '<button class="btn sm" onclick="runWifiScan()">&#128260; Scan Kanal WiFi</button><button class="btn sm ghost" onclick="runWifiScan(true)">&#128269; Scan Mendalam</button>' : '<span style="color:var(--mut)">Mode read-only (viewer) — minta admin/operator menjalankan scan</span>')
-    + '<span class="hint">sumber: <b>' + esc(w.source || '-') + '</b> • adapter: <b>' + esc(w.adapter || '-') + '</b>' + (w.reason ? ' • ' + esc(w.reason) : '') + '</span></div>'
+    + (canW() ? '<button class="btn sm" onclick="runWifiScan()">&#128260; Scan Kanal WiFi</button><button class="btn sm ghost" onclick="runWifiScan(true)">&#128269; Scan Mendalam</button>' : '<span style="color:var(--mut)">Mode read-only (viewer) — minta admin/operator menjalankan scan</span>') + '</div>'
+    + '<p class="hint">Sumber: <b>' + esc(w.source || '-') + '</b> &bull; adapter: <b>' + esc(w.adapter || '-') + '</b>' + (w.reason ? ' &bull; ' + esc(w.reason) : '') + '</p>'
     + '<p class="hint">Cache scan Windows biasanya hanya memuat tetangga sesaat setelah connect/roam (AP yang terhubung selalu muncul). Untuk pemetaan penuh, jalankan scan saat adapter baru terhubung atau buka halaman ini setelah koneksi WiFi dibuat ulang.</p></div>';
   document.getElementById('c').innerHTML = toolbar + wifiCards(w) + '<div id="speedBox">' + speedHtml(SPEED) + '</div>'
     + '<div class="panel"><h4>Nama WiFi Terlihat <span class="sub">' + (w.ssids || []).length + ' SSID (terhubung + tetangga)</span></h4>' + ssidTable(w.ssids || []) + '</div>'
@@ -468,10 +468,12 @@ function renderWifi(w) {
 }
 let SPEED = { last: null, history: [] };
 function fmtMs(v) { return v === null || v === undefined ? '-' : (+v).toFixed(v < 10 ? 1 : 0) + ' ms'; }
-function qualityWord(g, jitter) {
-  if (!g) return '<span style="color:var(--mut)">belum diuji</span>';
-  return '<span class="pill ' + ({ A: 'up', B: 'info', C: 'warn', D: 'warn', E: 'down' }[g] || 'info') + '">' + g + '</span>'
-    + ' <span style="color:var(--mut)">(jitter ' + fmtMs(jitter) + ')</span>';
+function fmtMbps(v) { return v === null || v === undefined ? '-' : (+v).toFixed(v < 10 ? 2 : 1); }
+// grade -> [label, warna]: dipakai kartu "Kualitas" & riwayat agar seragam
+const GRADES = { A: ['Sangat Baik', '#4ade80'], B: ['Baik', '#38bdf8'], C: ['Cukup', '#fbbf24'], D: ['Kurang', '#fb923c'], E: ['Buruk', '#f87171'] };
+function gradePill(g) {
+  const cls = { A: 'up', B: 'info', C: 'warn', D: 'warn', E: 'down' }[g] || 'info';
+  return '<span class="pill ' + cls + '">' + esc(g || '-') + '</span>';
 }
 function jitterBars(samples, pingAvg) {
   if (!samples || !samples.length) return '<span style="color:var(--mut)">-</span>';
@@ -492,21 +494,38 @@ function speedHtml(sp) {
     body = '<p class="hint">Belum ada hasil. Speedtest mengukur koneksi yang sedang dipakai perangkat ini (WiFi/LAN): <b>ping</b> + <b>jitter</b> ke gateway & internet, lalu <b>unduh</b> dan <b>unggah</b> nyata ±5 MB / ±1 MB.</p>';
   } else {
     const ping = { min: last.ping_min, avg: last.ping_avg, max: last.ping_max, jitter: last.jitter, loss: last.loss, target: last.target };
-    body = '<div class="speedgrid">'
-      + '<div><small>Unduh</small><h2>' + (last.down_mbps ?? '-') + ' <span>Mbps</span></h2></div>'
-      + '<div><small>Unggah</small><h2>' + (last.up_mbps ?? '-') + ' <span>Mbps</span></h2></div>'
-      + '<div><small>Ping internet (' + esc(last.target || '-') + ')</small><h2>' + fmtMs(ping.avg) + '</h2><span style="color:var(--mut)">min ' + fmtMs(ping.min) + ' • maks ' + fmtMs(ping.max) + '</span></div>'
-      + '<div><small>Jitter</small><h2>' + fmtMs(ping.jitter) + '</h2><span style="color:var(--mut)">loss ' + (ping.loss ?? '-') + '%</span></div>'
-      + '<div><small>Kualitas</small><h2>' + qualityWord(last.grade, ping.jitter) + '</h2></div>'
+    const g = GRADES[last.grade] || null;
+    const card = (label, big, sub, cls) => '<div><small>' + label + '</small><h2' + (cls ? ' class="' + cls + '"' : '') + '>' + big + '</h2><div class="subline">' + sub + '</div></div>';
+    // baris identitas koneksi: nama ISP, IP publik, lokasi, interface, endpoint, waktu
+    const chips = ['<span class="chip' + (last.isp ? ' isp' : '') + '">' + (last.isp
+      ? '&#127760; <b>' + esc(last.isp) + '</b>' + (last.asn ? ' <span class="muttxt">' + esc(last.asn) + '</span>' : '')
+      : '&#127760; ISP <b>-</b>') + '</span>'];
+    if (last.public_ip) chips.push('<span class="chip">IP publik <b>' + esc(last.public_ip) + '</b></span>');
+    if (last.geo) chips.push('<span class="chip">&#127757; ' + esc(last.geo) + '</span>');
+    chips.push('<span class="chip">via <b>' + esc(last.iface || '-') + '</b> ' + esc(last.local_ip || '-') + (last.subnet ? ' / ' + esc(last.subnet) : '') + '</span>');
+    chips.push('<span class="chip">endpoint <b>' + esc(last.endpoint || '-') + '</b></span>');
+    chips.push('<span class="chip">&#128337; ' + esc(last.ts || '-') + ' UTC</span>');
+    body = '<div class="chips">' + chips.join('') + '</div>'
+      + '<div class="speedgrid">'
+      + card('Unduh', fmtMbps(last.down_mbps) + ' <span>Mbps</span>', esc(last.endpoint || '-'), 'num-down')
+      + card('Unggah', fmtMbps(last.up_mbps) + ' <span>Mbps</span>', last.duration_ms ? 'durasi ' + (+last.duration_ms / 1000).toFixed(1) + ' dtk' : '&#8212;', 'num-up')
+      + card('Ping internet (' + esc(ping.target || '-') + ')', fmtMs(ping.avg), 'min ' + fmtMs(ping.min) + ' &bull; maks ' + fmtMs(ping.max), 'num-ping')
+      + card('Jitter', fmtMs(ping.jitter), 'loss ' + (ping.loss ?? '-') + '%', 'num-jit')
+      + card('Kualitas', g ? '<span style="color:' + g[1] + '">' + esc(last.grade) + '</span>' : '-', g ? g[0] : 'belum diuji', '')
       + '</div>'
-      + '<div class="speedmeta"><span>via <b>' + esc(last.iface || '-') + '</b> • IP lokal <b>' + esc(last.local_ip || '-') + '</b>' + (last.subnet ? ' (' + esc(last.subnet) + ')' : '') + ' • endpoint <b>' + esc(last.endpoint || '-') + '</b> • ' + esc(last.ts || '') + ' UTC</span></div>'
-      + '<div class="speedmeta"><span>Ping per sampel (20 terakhir) ke ' + esc(ping.target) + ': </span>' + jitterBars(last.ping_raw || null, ping.avg) + '</div>';
+      + '<div class="speedmeta"><span>Ping per sampel (20 terakhir) ke ' + esc(ping.target || '-') + ':</span>' + jitterBars(last.ping_raw || null, ping.avg) + '</div>';
   }
-  const hrows = hist.length ? '<table><tr><th>Waktu</th><th>Via / IP</th><th>Ping</th><th>Jitter</th><th>Down</th><th>Up</th><th>Grade</th></tr>'
-    + hist.map((x) => '<tr><td style="white-space:nowrap">' + esc(x.ts) + '</td><td>' + esc(x.iface || '-') + ' ' + esc(x.local_ip || '') + '</td><td>' + fmtMs(x.ping_avg) + '</td><td>' + fmtMs(x.jitter) + '</td><td>' + (x.down_mbps ?? '-') + ' Mbps</td><td>' + (x.up_mbps ?? '-') + ' Mbps</td><td>' + (x.grade || '-') + '</td></tr>').join('') + '</table>' : '';
+  const hrows = hist.length ? '<table><tr><th>Waktu (UTC)</th><th>ISP</th><th>Via / IP Lokal</th><th>Ping</th><th>Jitter</th><th>Down</th><th>Up</th><th>Kualitas</th></tr>'
+    + hist.map((x) => '<tr><td style="white-space:nowrap">' + esc(x.ts) + '</td>'
+      + '<td>' + (x.isp ? esc(x.isp) : '<span style="color:var(--mut)">-</span>') + '</td>'
+      + '<td>' + esc(x.iface || '-') + ' ' + esc(x.local_ip || '') + '</td>'
+      + '<td>' + fmtMs(x.ping_avg) + '</td><td>' + fmtMs(x.jitter) + '</td>'
+      + '<td>' + (x.down_mbps == null ? '-' : fmtMbps(x.down_mbps) + ' Mbps') + '</td>'
+      + '<td>' + (x.up_mbps == null ? '-' : fmtMbps(x.up_mbps) + ' Mbps') + '</td>'
+      + '<td>' + gradePill(x.grade) + '</td></tr>').join('') + '</table>' : '';
   return '<div class="panel"><h4>Speedtest WiFi / LAN <span class="sub">koneksi yang sedang dipakai perangkat ini</span></h4>'
-    + '<div class="toolbar">' + (canRun ? '<button class="btn sm" onclick="runSpeedtestUi()">&#9889; Jalankan Speedtest</button>' : '<span style="color:var(--mut)">Mode read-only (viewer)</span>')
-    + '<span class="hint">±10 ping ke gateway + internet, unduh ±5 MB, unggah ±1 MB (bisa ±30 dtk)</span></div>'
+    + '<div class="toolbar">' + (canRun ? '<button class="btn sm" onclick="runSpeedtestUi()">&#9889; Jalankan Speedtest</button>' : '<span style="color:var(--mut)">Mode read-only (viewer)</span>') + '</div>'
+    + '<p class="hint">&#177;10 ping ke gateway + internet, unduh &#177;5 MB, unggah &#177;1 MB (bisa &#177;30 dtk). Nama <b>ISP</b> &amp; IP publik dibaca dari penyedia info IP publik.</p>'
     + '<div id="speedRes">' + body + '</div>' + hrows + '</div>';
 }
 async function runSpeedtestUi() {
@@ -515,7 +534,8 @@ async function runSpeedtestUi() {
   try {
     const r = await api('/api/speedtest', { method: 'POST' });
     if (r.ok) {
-      toast('Speedtest: down ' + r.down.mbps + ' Mbps, up ' + r.up.mbps + ' Mbps, ping ' + r.ping.avg + ' ms, jitter ' + r.ping.jitter + ' ms');
+      const mb = (d) => (d && d.mbps !== null && d.mbps !== undefined ? d.mbps : '-');
+      toast('Speedtest' + (r.isp ? ' • ' + r.isp : '') + ': down ' + mb(r.down) + ' Mbps, up ' + mb(r.up) + ' Mbps, ping ' + r.ping.avg + ' ms, jitter ' + r.ping.jitter + ' ms');
     } else {
       toast((r.note || 'Speedtest gagal') , false);
     }

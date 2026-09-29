@@ -102,6 +102,9 @@ const fmtB = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6)
   const spGet = await T2(V.token, '/api/speedtest');
   ck('speedtest-api-get', spGet && typeof spGet === 'object' && Array.isArray(spGet.history) && ('last' in spGet),
     'last=' + !!spGet.last + ' hist=' + (spGet.history || []).length + (spGet.last ? ' grade=' + spGet.last.grade : ''));
+  ck('speedtest-isp-fields', typeof st.ispInfo === 'function'
+    && (!spGet.last || ('isp' in spGet.last && 'public_ip' in spGet.last && 'asn' in spGet.last && 'geo' in spGet.last)),
+    spGet && spGet.last ? 'isp=' + (spGet.last.isp || '-') + ' ip=' + (spGet.last.public_ip || '-') : 'belum ada hasil speedtest');
   const spPost = await fetch(B + '/api/speedtest', { method: 'POST', headers: H2(V.token) });
   ck('viewer-speedtest-blocked', spPost.status === 403, 'status=' + spPost.status);
   const slaCsv = await fetch(B + '/api/reports/sla.csv?days=7', { headers: H });
