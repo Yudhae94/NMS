@@ -115,6 +115,9 @@ const fmtB = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6)
   ck('frontend-appjs', appTxt.includes('vDash'));
   ck('frontend-wifi-ui', appTxt.includes('runSpeedtestUi') && appTxt.includes('ssidTable') && appTxt.includes('Scan Mendalam') && appTxt.includes('speedHtml'),
     'speedtest+ssid UI terpasang di app.js');
+  ck('frontend-login-ui', appTxt.includes('loginHtml') && appTxt.includes('fillLogin') && appTxt.includes('togglePw')
+    && appTxt.includes('capsHint') && appTxt.includes('class="lerr"') && !appTxt.includes('value="superadmin123"'),
+    'form login: label+ikon, toggle sandi, caps lock, pesan error, tanpa prefill password');
   console.log(out.join('\n'));
   if (process.exitCode) console.log('VERIFY: ADA YANG GAGAL'); else console.log('VERIFY: SEMUA OK');
 })().catch((e) => { console.error('VERIFY FAIL', e); process.exit(1); });

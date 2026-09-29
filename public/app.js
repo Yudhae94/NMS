@@ -59,11 +59,53 @@ function shell(inner, active) {
     + '<div class="userchip"><span class="dot"></span><b>' + esc(U.username) + '</b><span class="role">' + esc(U.role) + '</span></div>'
     + '<nav class="menu">' + nav + '<button class="danger" onclick="logout()">&#9166; Keluar</button></nav></header><main><div id="c">' + inner + '</div></main>';
 }
+const DEMO_ACCOUNTS = [['superadmin', 'superadmin123'], ['admin', 'admin123'], ['operator', 'operator123'], ['viewer', 'viewer123']];
+function loginHtml() {
+  return `<div id="loginWrap"><div id="login">
+<div class="l-logo">&#127760;</div>
+<h3>Network Monitoring</h3>
+<p class="lsub mut">Masuk untuk memantau &amp; mengelola jaringan Anda</p>
+<form class="lform" onsubmit="doLogin();return false">
+<label class="fld"><span class="flab">Pengguna</span><span class="inp"><i>&#128100;</i><input id="u" placeholder="superadmin" autocomplete="username" autofocus></span></label>
+<label class="fld"><span class="flab">Kata sandi</span><span class="inp"><i>&#128273;</i><input id="pw" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password"><button type="button" class="eye" onclick="togglePw()" title="Tampilkan / sembunyikan kata sandi" aria-label="Tampilkan kata sandi">&#128065;</button></span><small class="caps" id="capsHint" hidden>&#8679; Caps Lock aktif</small></label>
+<p id="le" class="lerr" hidden></p>
+<button class="btn lgo" id="lb" type="submit">Masuk Dashboard</button>
+</form>
+<details class="lhelp"><summary>Akun demo &mdash; klik untuk mengisi otomatis</summary>
+<div class="lacc">${DEMO_ACCOUNTS.map(([u, p]) => `<button type="button" class="btn sm ghost" onclick="fillLogin('${u}','${p}')">${u}</button>`).join('')}</div>
+<p class="lnote mut">Hak akses: superadmin &amp; admin (penuh) &bull; operator (ubah data) &bull; viewer (baca saja). Ganti password demo sebelum dipakai di jaringan nyata.</p>
+</details>
+<p class="lfoot mut">NMS Monitoring &bull; zero dependency &bull; Node.js</p>
+</div></div>`;
+}
+function wireLogin() {
+  const pw = document.getElementById('pw'), err = document.getElementById('le');
+  if (pw) pw.addEventListener('keyup', (e) => {
+    const h = document.getElementById('capsHint');
+    if (h) h.hidden = !(e.getModifierState && e.getModifierState('CapsLock'));
+  });
+  ['u', 'pw'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el && err) el.addEventListener('input', () => { err.hidden = true; });
+  });
+}
+function fillLogin(u, p) {
+  const a = document.getElementById('u'), b = document.getElementById('pw');
+  if (a) a.value = u;
+  if (b) b.value = p;
+  const btn = document.getElementById('lb');
+  if (btn) btn.focus();
+}
+function togglePw() {
+  const b = document.getElementById('pw');
+  if (!b) return;
+  b.type = b.type === 'password' ? 'text' : 'password';
+  b.focus();
+}
 function render() {
   if (!T || !U) {
-    app.innerHTML = '<div id="loginWrap"><div id="login"><div class="l-logo">&#128752;</div><h3>Network Monitoring</h3><p class="mut">Masuk untuk memantau jaringan Anda</p><input id="u" value="superadmin" autocomplete="username"><input id="pw" type="password" value="superadmin123" autocomplete="current-password"><button class="btn" onclick="doLogin()">Masuk Dashboard</button><p class="mut">superadmin/superadmin123 &bull; admin/admin123 &bull; operator/operator123 &bull; viewer/viewer123</p><p id="le" style="color:#f87171"></p></div></div>';
-    const go2 = () => doLogin();
-    document.getElementById('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') go2(); });
+    app.innerHTML = loginHtml();
+    wireLogin();
     return;
   }
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat...</div>', CUR);
@@ -336,16 +378,29 @@ async function runDisc() {
   } catch (e) { toast(e.message, false); }
 }
 async function doLogin() {
-  const username = document.getElementById('u').value, password = document.getElementById('pw').value;
-  const btn = document.querySelector('#login button');
+  const uEl = document.getElementById('u'), pEl = document.getElementById('pw');
+  const btn = document.getElementById('lb'), err = document.getElementById('le');
+  if (!uEl || !pEl || !btn || !err) return;
+  const username = uEl.value.trim(), password = pEl.value;
+  const fail = (m) => { err.textContent = m; err.hidden = false; };
+  err.hidden = true;
+  if (!username || !password) return fail('Isi pengguna dan kata sandi terlebih dahulu.');
+  btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Memeriksa...';
   try {
     const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
     const data = await r.json();
-    if (data.token) { T = data.token; U = data.user; localStorage.setItem('nms_tok', T); localStorage.setItem('nms_user', JSON.stringify(U)); CUR = 'dash'; render(); }
-    else document.getElementById('le').textContent = data.error || 'Login gagal';
-  } catch (e) { document.getElementById('le').textContent = 'Server tidak merespons — pastikan node server.js berjalan'; }
+    if (data.token) {
+      T = data.token; U = data.user;
+      localStorage.setItem('nms_tok', T); localStorage.setItem('nms_user', JSON.stringify(U));
+      CUR = 'dash'; render(); return;
+    }
+    fail(data.error || 'Login gagal — periksa pengguna & kata sandi');
+  } catch (e) { fail('Server tidak merespons — pastikan node server.js berjalan'); }
+  btn.disabled = false;
   btn.textContent = 'Masuk Dashboard';
+  pEl.focus();
+  if (pEl.select) pEl.select();
 }
 async function vUsers() {
   if (!canAdmin()) return go('dash');

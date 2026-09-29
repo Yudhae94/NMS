@@ -41,12 +41,29 @@ tbody tr:hover td{background:rgba(56,189,248,.08)}
 input,select{background:#0e1730;border:1px solid var(--line);color:var(--tx);padding:9px 11px;border-radius:10px}
 input:focus,select:focus{outline:2px solid var(--acc)}
 #loginWrap{min-height:100vh;display:grid;place-items:center;padding:20px}
-#login{width:360px;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);padding:26px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-#login .l-logo{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,var(--acc),var(--acc2))}
-#login h3{margin:12px 0 2px;font-size:22px}
-#login p.mut{color:var(--mut);font-size:13px;margin:0 0 12px}
-#login input{width:100%;margin:6px 0;padding:11px}
-#login button{width:100%;padding:11px;margin-top:8px}
+#login{width:min(400px,100%);background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);padding:28px;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+#login .l-logo{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 8px 24px rgba(56,189,248,.25)}
+#login h3{margin:14px 0 2px;font-size:22px;text-align:center}
+#login p.lsub{color:var(--mut);font-size:13px;margin:0 0 18px;text-align:center}
+#login .lform{display:flex;flex-direction:column;gap:13px}
+#login .flab{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin:0 0 5px 2px}
+#login .inp{display:flex;align-items:center;gap:9px;background:#0e1730;border:1px solid var(--line);border-radius:12px;padding:0 11px;transition:border-color .15s,box-shadow .15s}
+#login .inp:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+#login .inp i{font-style:normal;opacity:.65;font-size:14px}
+#login .inp input{flex:1;min-width:0;background:transparent;border:0;padding:11px 2px;color:var(--tx)}
+#login .inp input:focus{outline:none}
+#login .eye{background:transparent;border:0;color:var(--mut);cursor:pointer;font-size:14px;padding:4px 2px}
+#login .eye:hover{color:var(--tx)}
+#login .caps{display:block;margin:6px 0 0 2px;color:#fbbf24;font-size:11.5px}
+#login .lerr{margin:0;padding:9px 12px;border-radius:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fca5a5;font-size:12.5px}
+#login .lgo{width:100%;padding:12px;font-size:15px}
+#login .lgo:disabled{opacity:.7;cursor:progress}
+#login .lhelp{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+#login .lhelp summary{cursor:pointer;font-size:12px;color:var(--mut)}
+#login .lacc{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 7px}
+#login .lacc .btn{flex:1 1 auto;min-width:76px}
+#login p.lnote{color:var(--mut);font-size:11px;margin:0;line-height:1.55}
+#login p.lfoot{color:var(--mut);font-size:11px;margin:16px 0 0;text-align:center;opacity:.7}
 svg#topo{width:100%;height:440px;background:#0a1024;border:1px solid var(--line);border-radius:14px}
 .toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
 .toast div{background:#0e1730;border:1px solid var(--line);border-left:4px solid var(--acc);padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
