@@ -51,5 +51,27 @@ svg#topo{width:100%;height:440px;background:#0a1024;border:1px solid var(--line)
 .toast div{background:#0e1730;border:1px solid var(--line);border-left:4px solid var(--acc);padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;display:inline-block;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* kanal WiFi: spektrum, indikator sinyal, rekomendasi */
+.hint{color:var(--mut);font-size:12px;margin:6px 0 0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.sigbars{display:inline-flex;align-items:flex-end;gap:2px;height:13px;vertical-align:middle}
+.sigbar{width:3px;border-radius:2px;background:#26355f;display:inline-block}
+.sigbar:nth-child(1){height:4px}.sigbar:nth-child(2){height:7px}.sigbar:nth-child(3){height:10px}.sigbar:nth-child(4){height:13px}
+.sigbar.on{background:linear-gradient(180deg,#4ade80,#22c55e)}
+tr.recrow td{background:rgba(34,197,94,.10)}
+canvas#sp24,canvas#sp5,canvas#sp6{width:100%;background:#0a1024;border:1px solid var(--line);border-radius:12px}
+.reco{display:flex;gap:14px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:14px;background:#0e1730}
+.reco-ch{position:relative;min-width:88px;text-align:center;font-weight:800;font-size:20px;padding:10px 8px;border-radius:12px;background:linear-gradient(180deg,var(--card2),var(--card));overflow:hidden}
+.reco-ch::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bar,var(--acc))}
+/* speedtest: hasil unduh/unggah/ping/jitter + grafik sampel */
+.speedgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:4px 0 10px}
+.speedgrid>div{background:#0e1730;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.speedgrid small{color:var(--mut);text-transform:uppercase;letter-spacing:.6px;font-size:11px}
+.speedgrid h2{margin:4px 0 2px;font-size:26px}
+.speedgrid h2 span{font-size:13px;color:var(--mut);font-weight:400}
+.speedmeta{color:var(--mut);font-size:12px;margin:6px 0;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.speedmeta b{color:var(--tx)}
+.pingbars{display:inline-flex;align-items:flex-end;gap:2px;height:34px;padding:4px 6px;background:#0e1730;border:1px solid var(--line);border-radius:8px}
+.pingbars i{width:6px;border-radius:2px;display:inline-block}
 @media(max-width:640px){main{padding:10px}.card h2{font-size:24px}}
 

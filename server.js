@@ -138,8 +138,10 @@ async function router(req, res) {
   // ROUTES2
   const { deviceRoutes } = require('./lib/api-devices');
   const { miscRoutes, reportCsv } = require('./lib/api-misc');
+  const { wifiRoutes } = require('./lib/api-wifi');
   if (await deviceRoutes(req, res, u, m, p, needAuth, send, getBody)) return;
   if (await miscRoutes(req, res, u, m, p, needAuth, send, getBody)) return;
+  if (await wifiRoutes(req, res, u, m, p, needAuth, send, getBody)) return;
   if (await reportCsv(req, res, p, m, needAuth)) return;
   return send(res, 404, { error: 'Not found' });
 }

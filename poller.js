@@ -1,14 +1,19 @@
 'use strict';
 // Poller: ICMP ping, resource monitoring (simulasi), threshold alerts, notifikasi, eskalasi, syslog listener.
 const dgram = require('node:dgram');
+const path = require('node:path');
 const { exec } = require('node:child_process');
 const { db } = require('./lib/db');
 const POLL_MS = Number(process.env.POLL_MS || 30000);
 const SYSLOG_PORT = Number(process.env.SYSLOG_PORT || 5514);
 const TH = { cpu: 85, mem: 90, temp: 75, loss: 5, latency: 300 };
+// path absolut agar ping tetap jalan walau System32 tidak ada di PATH proses
+const PING_EXE = process.platform === 'win32'
+  ? `"${path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'PING.EXE')}"`
+  : 'ping';
 function ping(ip) {
   return new Promise((resolve) => {
-    const cmd = process.platform === 'win32' ? `ping -n 1 -w 1500 ${ip}` : `ping -c 1 -W 2 ${ip}`;
+    const cmd = process.platform === 'win32' ? `${PING_EXE} -n 1 -w 1500 ${ip}` : `ping -c 1 -W 2 ${ip}`;
     const t0 = Date.now();
     exec(cmd, (err, out) => {
       if (err) return resolve({ ok: false });

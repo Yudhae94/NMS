@@ -58,8 +58,60 @@ const fmtB = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6)
   const vtopo = await T2(V.token, '/api/topology'); ck('viewer-topology-ok', vtopo.nodes.length >= 5);
   const vrep = await T2(V.token, '/api/reports/summary'); ck('viewer-report-ok', vrep.devices >= 5);
   const me = await T('/api/auth/me'); ck('me', me.user && me.user.username === 'admin');
+  // ---- discovery kanal WiFi 2.4 & 5 GHz: parser murni (tanpa hardware) + API + RBAC ----
+  const wf = require('../lib/wifi');
+  ck('wifi-module', typeof wf.scanWifi === 'function' && typeof wf.analyzeBand === 'function' && wf.CH_24.length === 14 && wf.CH_5.includes(149),
+    'kanal 2.4=' + wf.CH_24.length + ', 5GHz=' + wf.CH_5.length);
+  const sample = wf.parseNetshNetworks([
+    'Interface name : Wi-Fi', 'There are 2 networks currently visible.', '',
+    'SSID 1 : LAB-5G', '    Authentication          : WPA2-Personal',
+    '    BSSID 1                 : 5c:92:5e:9b:2c:60', '         Signal             : 82%',
+    '         Radio type         : 802.11ac', '         Band               : 5 GHz', '         Channel            : 149',
+    'SSID 2 : LAB-2G', '    BSSID 1                 : a4:2b:b0:11:22:33', '         Signal             : 44%',
+    '         Radio type         : 802.11n', '         Channel            : 6',
+  ].join('\n'));
+  ck('wifi-parser-netsh', sample.length === 2 && sample[0].band === '5' && sample[0].channel === 149 && sample[0].freq_mhz === 5745 && sample[1].band === '2.4' && sample[1].freq_mhz === 2437,
+    sample.map((s) => s.ssid + '@' + s.band + 'GHz/ch' + s.channel).join(' '));
+  const nm = wf.parseNmcliList('LAB-2G:6E\\:D2\\:BA\\:13\\:FC\\:7D:8:2447 MHz:98:WPA2:no', 'SSID,BSSID,CHAN,FREQ,SIGNAL,SECURITY,ACTIVE');
+  ck('wifi-parser-nmcli', nm.length === 1 && nm[0].bssid === '6E:D2:BA:13:FC:7D' && nm[0].band === '2.4' && nm[0].channel === 8 && nm[0].signal === 98,
+    nm.length ? nm[0].ssid + '/' + nm[0].bssid + '/ch' + nm[0].channel : 'kosong');
+  const ana = wf.analyze(sample, null);
+  ck('wifi-analisis-band', ana.bands['2.4'].channels.length === 14 && ana.bands['5'].channels.some((c) => c.channel === 149 && !c.dfs) && ana.bands['5'].channels.some((c) => c.channel === 100 && c.dfs),
+    'rec2.4G=' + ana.bands['2.4'].recommend.channel + ' rec5G=' + ana.bands['5'].recommend.channel);
+  ck('wifi-rekomendasi-non-overlap', [1, 6, 11].includes(ana.bands['2.4'].recommend.channel) && ana.bands['5'].recommend.dfs === false, 'ch2.4=' + ana.bands['2.4'].recommend.channel);
+  const wapi = await T2(a.token, '/api/wifi');
+  ck('wifi-api-snapshot', !!(wapi.bands && wapi.bands['2.4'] && wapi.bands['5'] && Array.isArray(wapi.networks)), 'AP tersimpan=' + (wapi.networks || []).length + ' scan=' + (wapi.scanned_at || '-'));
+  const wscan = await T2(O.token, '/api/wifi/scan', { method: 'POST' });
+  ck('wifi-scan-operator', !!(wscan.counts && typeof wscan.counts.total === 'number' && wscan.bands), JSON.stringify(wscan.counts || wscan.reason || wscan));
+  const vscan = await fetch(B + '/api/wifi/scan', { method: 'POST', headers: H2(V.token) });
+  ck('viewer-wifi-scan-blocked', vscan.status === 403, 'status=' + vscan.status);
+  const wh = await T2(V.token, '/api/wifi/history?limit=3');
+  ck('wifi-history-viewer', Array.isArray(wh) && wh.length >= 1, 'n=' + (wh && wh.length));
+  const netLocal = await T2(a.token, '/api/network/local');
+  ck('network-local', !!netLocal.subnet && Array.isArray(netLocal.interfaces), JSON.stringify(netLocal.subnet) + ' iface=' + (netLocal.interfaces || []).length);
+  // ---- SSID group (semua nama terlihat: terhubung + tetangga) ----
+  ck('wifi-ssid-group', Array.isArray(ana.ssids) && ana.ssids.length === 2 && ana.ssids.every((s) => typeof s.strongest === 'number' && s.channels && typeof s.secured === 'boolean'),
+    ana.ssids.map((s) => s.ssid + '/ch' + s.channels + '/' + s.strongest + '%').join(' '));
+  ck('wifi-api-ssids', Array.isArray(wapi.ssids) && wapi.ssids.every((s) => s.ssid !== undefined && s.count >= 1), 'n=' + (wapi.ssids || []).length);
+  // ---- speedtest: module murni + grade + API + RBAC (tanpa jalankan tes jaringan) ----
+  const st = require('../lib/speedtest');
+  ck('speedtest-module', typeof st.runSpeedtest === 'function' && typeof st.latestSpeedtest === 'function'
+    && typeof st.pingStats === 'function' && typeof st.downTest === 'function' && typeof st.upTest === 'function');
+  ck('speedtest-grade', st.gradeOf(8, 2, 100) === 'A' && st.gradeOf(300, 80, 0.5) === 'E' && st.median([5, 1, 3]) === 3,
+    'A=' + st.gradeOf(8, 2, 100) + ' E=' + st.gradeOf(300, 80, 0.5));
+  const spGet = await T2(V.token, '/api/speedtest');
+  ck('speedtest-api-get', spGet && typeof spGet === 'object' && Array.isArray(spGet.history) && ('last' in spGet),
+    'last=' + !!spGet.last + ' hist=' + (spGet.history || []).length + (spGet.last ? ' grade=' + spGet.last.grade : ''));
+  const spPost = await fetch(B + '/api/speedtest', { method: 'POST', headers: H2(V.token) });
+  ck('viewer-speedtest-blocked', spPost.status === 403, 'status=' + spPost.status);
+  const slaCsv = await fetch(B + '/api/reports/sla.csv?days=7', { headers: H });
+  const slaTxt = await slaCsv.text();
+  ck('sla-csv-nyata', slaCsv.status === 200 && slaTxt.includes('uptime_pct') && !slaTxt.includes('lihat-'), slaTxt.split('\r\n')[0]);
   const idx = await fetch(B + '/'); ck('frontend-index', (await idx.text()).includes('Network Monitoring'));
-  const appjs = await fetch(B + '/app.js'); ck('frontend-appjs', (await appjs.text()).includes('vDash'));
+  const appjs = await fetch(B + '/app.js'); const appTxt = await appjs.text();
+  ck('frontend-appjs', appTxt.includes('vDash'));
+  ck('frontend-wifi-ui', appTxt.includes('runSpeedtestUi') && appTxt.includes('ssidTable') && appTxt.includes('Scan Mendalam') && appTxt.includes('speedHtml'),
+    'speedtest+ssid UI terpasang di app.js');
   console.log(out.join('\n'));
   if (process.exitCode) console.log('VERIFY: ADA YANG GAGAL'); else console.log('VERIFY: SEMUA OK');
 })().catch((e) => { console.error('VERIFY FAIL', e); process.exit(1); });
