@@ -287,6 +287,14 @@ function render() {
 function go(v) { stopLive(); CUR = v; ({ dash: vDash, live: vLive, dev: vDev, topo: vTopo, wifi: vWifi, alerts: vAlerts, events: vEvents, flow: vFlow, rep: vRep, sla: vSla, users: vUsers, chan: vChan, disc: vDisc }[v] || vDash)().catch((e) => { if (e.message === '__NF__') return; document.getElementById('c').innerHTML = '<div class="panel">Gagal memuat: ' + esc(e.message) + '</div>'; }); }
 let liveTimer = null;
 function stopLive() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
+// Jeda polling saat tab disembunyikan / proses tidak aktif: menghemat kuota
+// dan membuat halaman yang dibuka kembali langsung terisi.
+function pauseLiveWhenHidden() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopLive();
+    else if (CUR === 'live' && !liveTimer) vLive().catch(() => {});
+  });
+}
 async function vLive() {
   stopLive();
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat live traffic...</div>', 'live');
@@ -319,8 +327,10 @@ async function vLive() {
     } catch (e) { const s = document.getElementById('lvSt'); if (s) s.textContent = 'TERPUTUS'; }
   };
   await tick();
-  liveTimer = setInterval(tick, 3000);
+  // Hanya poll saat tab terlihat \u2014 hemat bandwidth & battery di HP.
+  if (!document.hidden) liveTimer = setInterval(tick, 3000);
 }
+pauseLiveWhenHidden();
 const isSuper = () => U && U.role === 'superadmin';
 const canW = () => U && (U.role === 'admin' || U.role === 'operator' || U.role === 'superadmin');
 const canAdmin = () => U && (U.role === 'admin' || U.role === 'superadmin');

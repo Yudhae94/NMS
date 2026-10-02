@@ -66,7 +66,14 @@ async function router(req, res) {
     if (fp.startsWith(PUB + path.sep) && MIME[path.extname(fp).toLowerCase()] && fs.existsSync(fp) && fs.statSync(fp).isFile()) {
       try {
         const data = fs.readFileSync(fp);
-        res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()], 'Content-Length': data.length, 'Cache-Control': 'no-cache' });
+        const ext = path.extname(fp).toLowerCase();
+        // Aset berversi (?v=) boleh disimpan lama & immutable; HTML & aset
+        // tanpa versi cukup short-cache agar update tetap cepat terlihat.
+        const isHtml = ext === '.html';
+        const cc = isHtml
+          ? 'public, max-age=0, must-revalidate'
+          : (u.searchParams.has('v') ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
+        res.writeHead(200, { 'Content-Type': MIME[ext], 'Content-Length': data.length, 'Cache-Control': cc });
         res.end(data);
         return;
       } catch (e) { return send(res, 500, { error: 'Gagal baca file statik' }); }
