@@ -1,14 +1,14 @@
-{
+﻿{
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "nms-monitoring",
   "main": "worker.js",
   "compatibility_date": "2025-01-01",
   "observability": { "enabled": true },
 
-  // URL tunnel aktif. Tunnel quick (trycloudflare) BERGANTI setiap restart —
+  // URL tunnel aktif. Tunnel quick (trycloudflare) BERGANTI setiap restart â€”
   // jalankan ulang `npm run tunnel` lalu perbarui nilai di sini & commit ulang.
   "vars": {
-    "ORIGIN_URL": "https://east-recruitment-social-venues.trycloudflare.com"
+    "ORIGIN_URL": "https://disabilities-sec-drag-islamic.trycloudflare.com"
   },
 
   // Aset statis hanya dipakai sebagai fallback bila origin/tunnel mati.
@@ -19,3 +19,4 @@
     "run_worker_first": true
   }
 }
+

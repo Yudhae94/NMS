@@ -13,6 +13,7 @@
     "cleanup-demo": "node scripts/cleanup-demo-alerts.js",
     "dev": "node server.js",
     "tunnel": "cloudflared tunnel --url http://localhost:3000 --no-autoupdate",
+    "online": "powershell -ExecutionPolicy Bypass -File scripts/online.ps1",
     "verify": "node scripts/verify.js"
   },
   "engines": {
