@@ -4,6 +4,16 @@ body{margin:0;min-height:100vh;color:var(--tx);font-family:'Segoe UI',system-ui,
 a{color:var(--acc)}
 .topbar{position:sticky;top:0;z-index:10;display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:rgba(10,16,34,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:.3px}
+.brand .bl{display:inline-flex;align-items:baseline;background:linear-gradient(90deg,var(--acc),var(--acc2) 45%,var(--up));
+  -webkit-background-clip:text;background-clip:text;color:transparent;background-size:220% 100%;
+  animation:lfShine 5.5s linear infinite}
+.brand .bl i{font-style:normal;display:inline-block;animation:lfPop .5s cubic-bezier(.2,1.5,.4,1) backwards;animation-delay:calc(var(--i,0) * 90ms + 120ms)}
+.brand .bsub{color:var(--mut);font-weight:400;margin-left:6px;background:none;animation:none;-webkit-text-fill-color:var(--mut)}
+@keyframes lfShine{0%{background-position:0% 0}100%{background-position:220% 0}}
+@keyframes lfPop{from{opacity:0;transform:translateY(-10px) scale(.6) rotate(-12deg)}to{opacity:1;transform:none}}
+/* menu navigasi: stagger masuk per tombol */
+nav.menu button.navbtn{animation:lfNav .42s cubic-bezier(.22,.85,.3,1) backwards;animation-delay:calc(var(--i,0) * 45ms)}
+@keyframes lfNav{from{opacity:0;transform:translateY(-8px) scale(.94)}to{opacity:1;transform:none}}
 .brand .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#06121f;font-weight:900}
 .userchip{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#0e1730;font-size:13px}
 .userchip .dot{width:9px;height:9px;border-radius:50%;background:var(--up)}
@@ -40,9 +50,125 @@ tbody tr:hover td{background:rgba(56,189,248,.08)}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 input,select{background:#0e1730;border:1px solid var(--line);color:var(--tx);padding:9px 11px;border-radius:10px}
 input:focus,select:focus{outline:2px solid var(--acc)}
-#loginWrap{min-height:100vh;display:grid;place-items:center;padding:20px}
-#login{width:min(400px,100%);background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);padding:28px;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+#loginWrap{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;overflow-x:hidden;overflow-y:auto}
+#lflow{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#loginWrap::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(520px 320px at 50% 45%,rgba(56,189,248,.10),transparent 70%),
+             radial-gradient(700px 380px at 12% 88%,rgba(129,140,248,.10),transparent 70%);
+  animation:lfBreath 9s ease-in-out infinite alternate}
+@keyframes lfBreath{from{opacity:.55}to{opacity:1}}
+#login{position:relative;z-index:1;width:min(400px,100%);background:linear-gradient(180deg,rgba(28,42,82,.94),rgba(22,33,63,.94));backdrop-filter:blur(6px);border:1px solid var(--line);padding:28px;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+/* transisi masuk: stagger per elemen (--d = delay) */
+@keyframes lfRise{from{opacity:0;transform:translateY(16px) scale(.985);filter:blur(5px)}
+  to{opacity:1;transform:none;filter:blur(0)}}
+#login .l-anim,.lw-hero .l-anim,.nf-card .l-anim{opacity:0;animation:lfRise .6s cubic-bezier(.22,.85,.3,1) forwards;animation-delay:var(--d,0s)}
+/* login gagal: getar */
+@keyframes lfShake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}
+  30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+#login.shake{animation:lfShake .45s cubic-bezier(.36,.07,.19,.97)}
+/* login sukses: kartu keluar ke atas + fade */
+@keyframes lfOut{to{opacity:0;transform:translateY(-22px) scale(.94);filter:blur(8px)}}
+#login.lout{animation:lfOut .3s ease forwards;pointer-events:none}
 #login .l-logo{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 8px 24px rgba(56,189,248,.25)}
+#login .l-logo>span{display:block;animation:lfPulse 3.4s ease-in-out 1.2s infinite}
+@keyframes lfPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
+@media (prefers-reduced-motion: reduce){
+  #login .l-anim,.lw-hero .l-anim,#login .l-logo>span,#loginWrap::before{animation:none;opacity:1;filter:none}
+  #login.shake,#login.lout{animation:none}
+  .lw-photo,.lw-title,.lw-badge-dot,.typing::after{animation:none}
+  .lw-hero .l-anim{opacity:1}
+}
+/* ===== halaman login: foto background + layout 2 kolom ===== */
+.lw-photo{position:absolute;inset:0;z-index:0;background-image:var(--login-bg,none);background-size:cover;
+  background-position:center;opacity:0;transition:opacity .9s ease;animation:lfZoom 26s ease-in-out infinite alternate}
+#loginWrap.has-photo .lw-photo{opacity:1}
+@keyframes lfZoom{from{transform:scale(1.03)}to{transform:scale(1.13)}}
+.lw-veil{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(900px 520px at 14% 8%,rgba(56,189,248,.15),transparent 62%),
+             radial-gradient(760px 460px at 92% 96%,rgba(129,140,248,.13),transparent 62%),
+             linear-gradient(100deg,rgba(6,10,24,.86) 0%,rgba(6,10,24,.60) 46%,rgba(6,10,24,.88) 100%)}
+#loginWrap.has-photo .lw-veil{background:radial-gradient(900px 520px at 14% 8%,rgba(56,189,248,.17),transparent 62%),
+             linear-gradient(100deg,rgba(4,8,20,.93) 0%,rgba(4,8,20,.66) 48%,rgba(4,8,20,.94) 100%)}
+#loginWrap.has-photo #lflow{opacity:.32}
+.lw-grid{position:relative;z-index:1;width:min(1080px,100%);margin:auto;display:grid;grid-template-columns:1.06fr .92fr;gap:40px;align-items:center}
+.lw-hero{display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0}
+.lw-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;
+  border:1px solid rgba(56,189,248,.34);background:rgba(56,189,248,.10);color:#7dd3fc;font-size:11px;font-weight:800;letter-spacing:1.4px}
+.lw-badge-dot{width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 10px var(--up);animation:lfBlink 1.6s ease-in-out infinite}
+.lw-title{margin:2px 0 0;font-size:clamp(30px,4.2vw,46px);line-height:1.06;font-weight:900;letter-spacing:-.6px;min-height:1.12em;
+  background:linear-gradient(95deg,#e8eefc 0%,#7dd3fc 32%,#a78bfa 62%,#e8eefc 100%);background-size:240% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:lfShine 7s linear infinite}
+.lw-sub{color:#c6d2f2;font-size:14.5px;line-height:1.65;margin:2px 0 0;max-width:44ch}
+.lw-feats{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 0;padding:0}
+.lw-feats li{font-size:12.5px;padding:7px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.10);
+  background:rgba(12,20,44,.55);color:#d8e2fb;backdrop-filter:blur(4px)}
+.lw-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.lw-meta span{font-size:11px;color:var(--mut);padding:4px 11px;border-radius:999px;border:1px dashed var(--line);background:rgba(9,15,34,.40)}
+#login .l-head{display:flex;flex-direction:column;align-items:center;text-align:center}
+#login .l-logo{margin:0 auto}
+/* layar menengah: dua kolom tetap, rapatkan */
+@media(max-width:1180px){
+  .lw-grid{gap:24px}
+  .lw-title{font-size:clamp(27px,3.5vw,38px)}
+  .lw-sub{font-size:13.5px;max-width:38ch}
+  #login{padding:24px}
+}
+/* tablet & ponsel: satu kolom, ringkas */
+@media(max-width:900px){
+  #loginWrap{padding:16px}
+  .lw-grid{grid-template-columns:1fr;gap:16px;max-width:560px}
+  .lw-hero{align-items:center;text-align:center}
+  .lw-sub{margin:0 auto;font-size:13px;line-height:1.55}
+  .lw-feats{justify-content:center}
+  .lw-meta{justify-content:center}
+  .lw-title{font-size:clamp(24px,6.6vw,34px)}
+  #login{padding:22px 20px;border-radius:18px}
+}
+/* ponsel kecil: buat kartu login langsung terlihat */
+@media(max-width:430px){
+  .lw-meta{display:none}
+  .lw-feats li{font-size:11.5px;padding:6px 10px}
+}
+/* ===== efek mengetik (kursor) ===== */
+.typing::after{content:'\2588';margin-left:2px;color:var(--acc);-webkit-text-fill-color:var(--acc);animation:lfCaret .7s steps(1) infinite}
+@keyframes lfCaret{50%{opacity:0}}
+/* ===== animasi logout: halaman diredupkan + overlay ===== */
+.topbar,main{transition:opacity .34s ease,transform .34s ease,filter .34s ease}
+body.byeing .topbar,body.byeing main{opacity:0;transform:translateY(-16px) scale(.985);filter:blur(7px)}
+.bye{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(8,13,30,.72);backdrop-filter:blur(4px);animation:lfFade .3s ease}
+@keyframes lfFade{from{opacity:0}to{opacity:1}}
+.bye-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 30px;border:1px solid var(--line);
+  border-radius:18px;background:linear-gradient(180deg,var(--card2),var(--card));box-shadow:0 20px 50px rgba(0,0,0,.5);
+  animation:lfBye .5s cubic-bezier(.22,.85,.3,1)}
+.bye-box b{font-size:15px}
+.bye-box small{color:var(--mut);font-size:12px}
+@keyframes lfBye{0%{opacity:0;transform:translateY(14px) scale(.9)}60%{opacity:1;transform:translateY(0) scale(1.03)}100%{transform:none}}
+/* ===== layar 404 beranimasi ===== */
+#nfWrap{position:relative;min-height:100vh;display:grid;place-items:center;padding:20px;overflow:hidden}
+#nfWrap #lflow{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#nfWrap::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(520px 320px at 50% 45%,rgba(239,68,68,.12),transparent 70%)}
+.nf-card{position:relative;z-index:1;width:min(560px,100%);text-align:center;padding:34px 28px;
+  background:linear-gradient(180deg,rgba(28,42,82,.94),rgba(22,33,63,.94));backdrop-filter:blur(6px);
+  border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.nf-card .l-anim{opacity:0;animation:lfRise .6s cubic-bezier(.22,.85,.3,1) forwards;animation-delay:var(--d,0s)}
+.nf-code{font-size:clamp(64px,16vw,124px);font-weight:900;line-height:1;letter-spacing:2px;
+  font-variant-numeric:tabular-nums;color:transparent;-webkit-text-stroke:2px var(--down);
+  text-shadow:0 0 26px rgba(239,68,68,.35);
+  animation:lfRise .7s cubic-bezier(.22,.85,.3,1) .05s backwards, lfGlitch 3.2s ease-in-out .85s infinite}
+@keyframes lfGlitch{0%,92%,100%{transform:none;opacity:1}94%{transform:translateX(-3px) skewX(-6deg);opacity:.75}96%{transform:translateX(3px) skewX(6deg)}98%{transform:none}}
+.nf-sig{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 12px;border-radius:999px;
+  border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.10);color:#fca5a5;font-size:12px}
+.nf-sig .dot{width:8px;height:8px;border-radius:50%;background:var(--down);animation:lfBlink 1.1s ease-in-out infinite}
+@keyframes lfBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.7)}}
+.nf-title{margin:16px 0 6px;font-size:24px;min-height:30px}
+.nf-msg{color:var(--mut);font-size:13.5px;line-height:1.6;margin:0 auto 20px;max-width:44ch}
+.nf-acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@media (prefers-reduced-motion: reduce){
+  .brand .bl i,.brand .bl,nav.menu button.navbtn,.nf-code,.nf-sig .dot,.bye-box,.bye,.topbar,main{animation:none;transition:none;opacity:1;transform:none;filter:none}
+  .nf-card .l-anim{animation:none;opacity:1;filter:none}
+  .typing::after{animation:none}
+}
 #login h3{margin:14px 0 2px;font-size:22px;text-align:center}
 #login p.lsub{color:var(--mut);font-size:13px;margin:0 0 18px;text-align:center}
 #login .lform{display:flex;flex-direction:column;gap:13px}
@@ -103,4 +229,14 @@ canvas#sp24,canvas#sp5,canvas#sp6{width:100%;background:#0a1024;border:1px solid
 .pingbars{display:inline-flex;align-items:flex-end;gap:2px;height:34px;padding:4px 6px;background:#0e1730;border:1px solid var(--line);border-radius:8px}
 .pingbars i{width:6px;border-radius:2px;display:inline-block}
 @media(max-width:640px){main{padding:10px}.card h2{font-size:24px}}
+/* ===== background foto untuk halaman dashboard (setelah login) =====
+   Foto asli diletakkan di public/img/dash-bg.jpg; bila file dihapus, halaman
+   otomatis kembali ke gradient (tanpa request gambar yang gagal).         */
+body.appbg{background-image:linear-gradient(180deg,rgba(8,14,30,.88) 0%,rgba(10,17,36,.55) 26%,rgba(12,20,42,.62) 62%,rgba(15,24,48,.88) 100%),var(--app-bg,none);background-size:cover;background-position:center center;background-repeat:no-repeat;background-attachment:fixed}
+body.appbg .topbar{background:rgba(10,16,34,.92)}
+body.appbg .card,body.appbg .panel{background:rgba(22,33,63,.92);backdrop-filter:blur(3px)}
+body.appbg main{padding-top:14px}
+@media(prefers-reduced-motion:no-preference){body.appbg{animation:appbgIn .7s ease both}}
+@keyframes appbgIn{from{opacity:.35}to{opacity:1}}
+@media(max-width:900px){body.appbg{background-attachment:scroll}}
 

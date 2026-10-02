@@ -57,18 +57,20 @@ async function router(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   if (m === 'OPTIONS') { res.writeHead(204); return res.end(); }
-  if (m === 'GET' && (p === '/' || p === '/index.html' || p === '/app.js' || p === '/style.css')) {
-    const f = p === '/' ? '/public/index.html' : '/public' + p;
-    const fp = path.join(__dirname, f);
-    try {
-      if (fs.existsSync(fp)) {
+  // ---- file statis dari /public (html, css, js, gambar, font) ----
+  const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.map': 'application/json' };
+  if (m === 'GET' && !p.startsWith('/api/') && p !== '/404.html') {
+    const rel = p === '/' ? '/index.html' : p;
+    const PUB = path.join(__dirname, 'public');
+    const fp = path.resolve(PUB, '.' + path.posix.normalize(rel));
+    if (fp.startsWith(PUB + path.sep) && MIME[path.extname(fp).toLowerCase()] && fs.existsSync(fp) && fs.statSync(fp).isFile()) {
+      try {
         const data = fs.readFileSync(fp);
-        const ct = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' }[path.extname(fp)] || 'text/plain';
-        res.writeHead(200, { 'Content-Type': ct, 'Content-Length': data.length, 'Cache-Control': 'no-cache' });
+        res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()], 'Content-Length': data.length, 'Cache-Control': 'no-cache' });
         res.end(data);
         return;
-      }
-    } catch (e) { return send(res, 500, { error: 'Gagal baca file statik' }); }
+      } catch (e) { return send(res, 500, { error: 'Gagal baca file statik' }); }
+    }
   }
   if (m === 'GET' && p === '/api/health') return send(res, 200, { ok: true, time: new Date().toISOString() });
   if (m === 'POST' && p === '/api/auth/login') {
@@ -143,6 +145,14 @@ async function router(req, res) {
   if (await miscRoutes(req, res, u, m, p, needAuth, send, getBody)) return;
   if (await wifiRoutes(req, res, u, m, p, needAuth, send, getBody)) return;
   if (await reportCsv(req, res, p, m, needAuth)) return;
+  // path halaman (non-API) yang tidak dikenal -> layar 404 beranimasi (public/404.html)
+  if (m === 'GET' && !p.startsWith('/api/')) {
+    try {
+      const nf = fs.readFileSync(path.join(__dirname, '/public/404.html'));
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': nf.length, 'Cache-Control': 'no-cache' });
+      return res.end(nf);
+    } catch (e) { /* file hilang -> fallback JSON di bawah */ }
+  }
   return send(res, 404, { error: 'Not found' });
 }
 const server = http.createServer(router);

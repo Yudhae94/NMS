@@ -1,4 +1,6 @@
 'use strict';
+// diset true oleh public/404.html agar halaman 404 tampil (server mengirim status 404)
+const FORCE404 = !!window.NMS404;
 let T = localStorage.getItem('nms_tok') || '';
 let U = JSON.parse(localStorage.getItem('nms_user') || 'null');
 let CUR = 'dash';
@@ -9,10 +11,30 @@ async function api(p, o = {}) {
   if (r.status === 401) { logout(); throw new Error('Unauthorized'); }
   const ct = r.headers.get('content-type') || '';
   const data = ct.includes('json') ? await r.json() : await r.text();
+  if (r.status === 404) { show404((data && data.error) || 'Endpoint tidak ditemukan'); throw new Error('__NF__'); }
   if (!r.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
   return data;
 }
-function logout() { stopLive(); T = ''; U = null; CUR = 'dash'; localStorage.clear(); render(); }
+let logoutBusy = false;
+function logout() {
+  if (logoutBusy) return;
+  logoutBusy = true;
+  stopLive(); stopFlowBg();
+  const who = U ? U.username : '';
+  const ov = document.createElement('div');
+  ov.className = 'bye';
+  ov.innerHTML = '<div class="bye-box"><span class="spin"></span><b>Mengakhiri sesi...</b><small>' + esc(who) + '</small></div>';
+  document.body.appendChild(ov);
+  document.body.classList.add('byeing');
+  const done = () => {
+    T = ''; U = null; CUR = 'dash'; localStorage.clear();
+    document.body.classList.remove('byeing');
+    if (ov.parentNode) ov.remove();
+    logoutBusy = false;
+    render();
+  };
+  if (reducedMotion()) setTimeout(done, 40); else setTimeout(done, 560);
+}
 function toast(msg, ok = true) {
   let w = document.querySelector('.toast');
   if (!w) { w = document.createElement('div'); w.className = 'toast'; document.body.appendChild(w); }
@@ -49,36 +71,184 @@ function lineChart(cv, series) {
     c.fillStyle = cols[k % 3]; c.fillRect(40 + k * 110, 12, 22, 3); c.fillText(s.name, 66 + k * 110, 18);
   });
 }
+// brand: tiap huruf NMS muncul berurutan + shimmer
+function brandLetters(txt) { return Array.from(txt).map((c, i) => '<i style="--i:' + i + '">' + esc(c) + '</i>').join(''); }
 function shell(inner, active) {
   const isA = U.role === 'admin' || U.role === 'superadmin', isO = U.role === 'operator' || isA;
-  const btn = (id, label) => '<button data-v="' + id + '" class="' + (active === id ? 'on' : '') + '" onclick="go(\'' + id + '\')">' + label + '</button>';
+  let ni = 0;
+  const btn = (id, label) => '<button data-v="' + id + '" class="navbtn ' + (active === id ? 'on' : '') + '" style="--i:' + (ni++ * .045).toFixed(3) + 's" onclick="go(\'' + id + '\')">' + label + '</button>';
   let nav = btn('dash', '&#128202; Dashboard') + btn('live', '&#128994; Live Traffic') + btn('dev', '&#128752; Devices') + btn('topo', '&#127760; Topologi') + btn('wifi', '&#128246; Kanal WiFi') + btn('alerts', '&#128276; Alerts') + btn('events', '&#128221; Events') + btn('flow', '&#8646; Flows') + btn('rep', '&#128203; Laporan') + btn('sla', '&#9989; SLA');
   if (isA) nav += btn('users', '&#128100; Users') + btn('chan', '&#128225; Channels');
   if (isO) nav += btn('disc', '&#128269; Discovery');
-  return '<header class="topbar"><div class="brand"><span class="logo">N</span><span>NMS <span style="color:var(--mut);font-weight:400">Monitoring</span></span></div>'
+  return '<header class="topbar"><div class="brand"><span class="logo">N</span><span class="bl">' + brandLetters('NMS') + '<span class="bsub">Monitoring</span></span></div>'
     + '<div class="userchip"><span class="dot"></span><b>' + esc(U.username) + '</b><span class="role">' + esc(U.role) + '</span></div>'
-    + '<nav class="menu">' + nav + '<button class="danger" onclick="logout()">&#9166; Keluar</button></nav></header><main><div id="c">' + inner + '</div></main>';
+    + '<nav class="menu">' + nav + '<button class="danger navbtn" style="--i:' + (ni * .045).toFixed(3) + 's" onclick="logout()">&#9166; Keluar</button></nav></header><main><div id="c">' + inner + '</div></main>';
 }
 const DEMO_ACCOUNTS = [['superadmin', 'superadmin123'], ['admin', 'admin123'], ['operator', 'operator123'], ['viewer', 'viewer123']];
 function loginHtml() {
-  return `<div id="loginWrap"><div id="login">
-<div class="l-logo">&#127760;</div>
-<h3>Network Monitoring</h3>
-<p class="lsub mut">Masuk untuk memantau &amp; mengelola jaringan Anda</p>
+  return `<div id="loginWrap">
+<div class="lw-photo" aria-hidden="true"></div>
+<div class="lw-veil" aria-hidden="true"></div>
+<canvas id="lflow" aria-hidden="true"></canvas>
+<div class="lw-grid">
+<section class="lw-hero">
+<div class="lw-badge l-anim" style="--d:.02s"><span class="lw-badge-dot"></span>NMS MONITORING</div>
+<h1 class="lw-title l-anim" id="brandTitle" style="--d:.10s"></h1>
+<p class="lw-sub l-anim" style="--d:.28s">Pantau perangkat, topologi, trafik, kanal WiFi, alert, dan SLA jaringan Anda secara real-time.</p>
+<ul class="lw-feats l-anim" style="--d:.36s">
+<li>&#128202; Dashboard &amp; grafik real-time</li>
+<li>&#127760; Peta topologi visual</li>
+<li>&#128246; Scan kanal WiFi 2.4 &amp; 5 GHz</li>
+<li>&#128276; Alert, syslog &amp; laporan SLA</li>
+</ul>
+<div class="lw-meta l-anim" style="--d:.44s"><span>Zero dependency</span><span>Node.js</span><span>SNMP v2c/v3</span></div>
+</section>
+<div id="login">
+<div class="l-head">
+<div class="l-logo l-anim" style="--d:.16s"><span>&#127760;</span></div>
+<h3 class="l-anim" style="--d:.22s">Masuk ke Dashboard</h3>
+<p class="lsub mut l-anim" style="--d:.28s">Gunakan akun admin / operator / viewer Anda</p>
+</div>
 <form class="lform" onsubmit="doLogin();return false">
-<label class="fld"><span class="flab">Pengguna</span><span class="inp"><i>&#128100;</i><input id="u" placeholder="superadmin" autocomplete="username" autofocus></span></label>
-<label class="fld"><span class="flab">Kata sandi</span><span class="inp"><i>&#128273;</i><input id="pw" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password"><button type="button" class="eye" onclick="togglePw()" title="Tampilkan / sembunyikan kata sandi" aria-label="Tampilkan kata sandi">&#128065;</button></span><small class="caps" id="capsHint" hidden>&#8679; Caps Lock aktif</small></label>
+<label class="fld l-anim" style="--d:.34s"><span class="flab">Pengguna</span><span class="inp"><i>&#128100;</i><input id="u" placeholder="superadmin" autocomplete="username" autofocus></span></label>
+<label class="fld l-anim" style="--d:.40s"><span class="flab">Kata sandi</span><span class="inp"><i>&#128273;</i><input id="pw" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password"><button type="button" class="eye" onclick="togglePw()" title="Tampilkan / sembunyikan kata sandi" aria-label="Tampilkan kata sandi">&#128065;</button></span><small class="caps" id="capsHint" hidden>&#8679; Caps Lock aktif</small></label>
 <p id="le" class="lerr" hidden></p>
-<button class="btn lgo" id="lb" type="submit">Masuk Dashboard</button>
+<button class="btn lgo l-anim" id="lb" type="submit" style="--d:.46s">Masuk Dashboard</button>
 </form>
-<details class="lhelp"><summary>Akun demo &mdash; klik untuk mengisi otomatis</summary>
+<details class="lhelp l-anim" style="--d:.52s"><summary>Akun demo &mdash; klik untuk mengisi otomatis</summary>
 <div class="lacc">${DEMO_ACCOUNTS.map(([u, p]) => `<button type="button" class="btn sm ghost" onclick="fillLogin('${u}','${p}')">${u}</button>`).join('')}</div>
 <p class="lnote mut">Hak akses: superadmin &amp; admin (penuh) &bull; operator (ubah data) &bull; viewer (baca saja). Ganti password demo sebelum dipakai di jaringan nyata.</p>
 </details>
-<p class="lfoot mut">NMS Monitoring &bull; zero dependency &bull; Node.js</p>
+<p class="lfoot mut l-anim" style="--d:.58s">&#128274; Token JWT &bull; sesi terenkripsi &bull; NMS Monitoring</p>
+</div>
 </div></div>`;
 }
+// gambar background login (simpan file di public/img/ dengan salah satu nama ini)
+const LOGIN_BG = ['/img/login-bg.jpg', '/img/login-bg.png', '/img/login-bg.jpeg', '/img/login-bg.webp', '/img/login-bg.svg'];
+function applyLoginBg() {
+  const wrap = document.getElementById('loginWrap');
+  if (!wrap) return;
+  if (typeof Image === 'undefined') { wrap.classList.add('no-photo'); return; }
+  let i = 0;
+  const next = () => {
+    if (i >= LOGIN_BG.length) { wrap.classList.add('no-photo'); return; }   // foto tidak ada -> tetap pakai gradient
+    const url = LOGIN_BG[i++];
+    const im = new Image();
+    im.onload = () => { wrap.style.setProperty('--login-bg', 'url("' + url + '")'); wrap.classList.add('has-photo'); };
+    im.onerror = next;
+    im.src = url;
+  };
+  next();
+}
+/* gambar background dashboard (halaman setelah login) - simpan file di public/img/
+   dengan salah satu nama berikut; pakai nama sendiri = ganti daftar di sini. */
+const APP_BG = ['/img/dash-bg.jpg', '/img/dash-bg.png', '/img/dash-bg.jpeg', '/img/dash-bg.webp', '/img/login-bg.jpg'];
+function applyAppBg() {
+  if (FORCE404) return;
+  let i = 0;
+  const next = () => {
+    if (i >= APP_BG.length) { document.body.classList.remove('appbg'); return; }  // tidak ada foto -> kembali ke gradient
+    const url = APP_BG[i++];
+    const im = new Image();
+    im.onload = () => {
+      document.body.style.setProperty('--app-bg', 'url("' + url + '")');
+      document.body.classList.add('appbg');
+    };
+    im.onerror = next;
+    im.src = url;
+  };
+  next();
+}
+/* ===== Latarbelakang "network flow" (canvas, tanpa dependency) untuk halaman login =====
+   Node + link statis, paket data mengalir di sepanjang link, node berdenyut.
+   Menghormati prefers-reduced-motion (1 frame statis, tanpa rAF).                  */
+let flowRaf = null, flowCleanup = null;
+function stopFlowBg() {
+  if (flowRaf) { cancelAnimationFrame(flowRaf); flowRaf = null; }
+  if (flowCleanup) { flowCleanup(); flowCleanup = null; }
+}
+function startFlowBg() {
+  const cv = document.getElementById('lflow');
+  if (!cv || typeof cv.getContext !== 'function' || flowRaf) return;
+  const ctx = cv.getContext('2d');
+  if (!ctx) return;
+  const reduce = reducedMotion();
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  let W = 0, H = 0, nodes = [], links = [], packets = [], tid = 0, last = 0;
+  function build() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = Math.max(1, cv.clientWidth); H = Math.max(1, cv.clientHeight);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.max(12, Math.min(32, Math.round((W * H) / 28000)));
+    nodes = []; links = []; packets = [];
+    for (let i = 0; i < n; i++) nodes.push({ x: rnd(0, W), y: rnd(0, H), r: rnd(1.2, 3), ph: rnd(0, 6.283) });
+    for (let i = 0; i < n; i++) {
+      const near = nodes.map((nd, j) => ({ j, d: (nd.x - nodes[i].x) ** 2 + (nd.y - nodes[i].y) ** 2 }))
+        .filter((o) => o.j !== i).sort((a, b) => a.d - b.d).slice(0, 2);
+      near.forEach((o) => {
+        const key = i < o.j ? i + '_' + o.j : o.j + '_' + i;
+        if (links.some((l) => l.key === key)) return;
+        const link = { key, a: nodes[i], b: nodes[o.j] };
+        links.push(link);
+        const cnt = Math.random() < 0.55 ? 2 : 1;
+        for (let k = 0; k < cnt; k++) packets.push({
+          l: link, t: Math.random(), sp: rnd(0.10, 0.26) * (Math.random() < 0.5 ? -1 : 1),
+          c: Math.random() < 0.22 ? '#a3e635' : Math.random() < 0.5 ? '#818cf8' : '#38bdf8',
+        });
+      });
+    }
+  }
+  function paint(dt, now) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineWidth = 1;
+    links.forEach((l) => {
+      const g = ctx.createLinearGradient(l.a.x, l.a.y, l.b.x, l.b.y);
+      g.addColorStop(0, 'rgba(56,189,248,.02)');
+      g.addColorStop(.5, 'rgba(56,189,248,.16)');
+      g.addColorStop(1, 'rgba(129,140,248,.02)');
+      ctx.strokeStyle = g;
+      ctx.beginPath(); ctx.moveTo(l.a.x, l.a.y); ctx.lineTo(l.b.x, l.b.y); ctx.stroke();
+    });
+    nodes.forEach((nd) => {
+      const pu = 0.6 + 0.4 * Math.sin(now * 1.4 + nd.ph);
+      ctx.fillStyle = 'rgba(147,161,196,' + (0.34 * pu).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r, 0, 6.2832); ctx.fill();
+    });
+    packets.forEach((p) => {
+      if (dt) {
+        p.t += p.sp * dt;
+        if (p.t > 1.06) p.t = -0.06;
+        if (p.t < -0.06) p.t = 1.06;
+      }
+      const dir = p.sp < 0 ? -1 : 1;
+      const at = (t) => { const tt = dir > 0 ? t : 1 - t; return [p.l.a.x + (p.l.b.x - p.l.a.x) * tt, p.l.a.y + (p.l.b.y - p.l.a.y) * tt]; };
+      const x = at(p.t), tail = at(p.t - dir * 0.09);
+      ctx.strokeStyle = p.c; ctx.lineWidth = 1.6; ctx.shadowBlur = 8; ctx.shadowColor = p.c;
+      ctx.beginPath(); ctx.moveTo(tail[0], tail[1]); ctx.lineTo(x[0], x[1]); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#e8eefc';
+      ctx.beginPath(); ctx.arc(x[0], x[1], 1.6, 0, 6.2832); ctx.fill();
+    });
+  }
+  const onResize = () => { clearTimeout(tid); tid = setTimeout(() => { build(); paint(reduce ? 0 : 0.016, performance.now() / 1000); }, 150); };
+  window.addEventListener('resize', onResize);
+  flowCleanup = () => { clearTimeout(tid); window.removeEventListener('resize', onResize); };
+  build();
+  if (reduce) { paint(0, 0); return; }
+  const frame = (ts) => {
+    flowRaf = requestAnimationFrame(frame);
+    if (!cv.isConnected) { stopFlowBg(); return; }
+    const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0.016;
+    last = ts;
+    try { paint(dt, ts / 1000); } catch (e) { stopFlowBg(); }   // animasi tidak boleh mengganggu form login
+  };
+  flowRaf = requestAnimationFrame(frame);
+}
 function wireLogin() {
+  startFlowBg();
+  applyLoginBg();
+  typeText(document.getElementById('brandTitle'), 'Network Monitoring', 52);   // nama brand diketik
   const pw = document.getElementById('pw'), err = document.getElementById('le');
   if (pw) pw.addEventListener('keyup', (e) => {
     const h = document.getElementById('capsHint');
@@ -103,15 +273,18 @@ function togglePw() {
   b.focus();
 }
 function render() {
+  if (FORCE404) { app.innerHTML = notFoundHtml('Alamat <b>' + esc(location.pathname || '/') + '</b> tidak dikenal server NMS.'); wire404(); return; }
   if (!T || !U) {
+    document.body.classList.remove('appbg');
     app.innerHTML = loginHtml();
     wireLogin();
     return;
   }
+  applyAppBg();
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat...</div>', CUR);
   go(CUR);
 }
-function go(v) { stopLive(); CUR = v; ({ dash: vDash, live: vLive, dev: vDev, topo: vTopo, wifi: vWifi, alerts: vAlerts, events: vEvents, flow: vFlow, rep: vRep, sla: vSla, users: vUsers, chan: vChan, disc: vDisc }[v] || vDash)().catch((e) => { document.getElementById('c').innerHTML = '<div class="panel">Gagal memuat: ' + esc(e.message) + '</div>'; }); }
+function go(v) { stopLive(); CUR = v; ({ dash: vDash, live: vLive, dev: vDev, topo: vTopo, wifi: vWifi, alerts: vAlerts, events: vEvents, flow: vFlow, rep: vRep, sla: vSla, users: vUsers, chan: vChan, disc: vDisc }[v] || vDash)().catch((e) => { if (e.message === '__NF__') return; document.getElementById('c').innerHTML = '<div class="panel">Gagal memuat: ' + esc(e.message) + '</div>'; }); }
 let liveTimer = null;
 function stopLive() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
 async function vLive() {
@@ -382,7 +555,11 @@ async function doLogin() {
   const btn = document.getElementById('lb'), err = document.getElementById('le');
   if (!uEl || !pEl || !btn || !err) return;
   const username = uEl.value.trim(), password = pEl.value;
-  const fail = (m) => { err.textContent = m; err.hidden = false; };
+  const fail = (m) => {
+    err.textContent = m; err.hidden = false;
+    const card = document.getElementById('login');
+    if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  };
   err.hidden = true;
   if (!username || !password) return fail('Isi pengguna dan kata sandi terlebih dahulu.');
   btn.disabled = true;
@@ -393,7 +570,14 @@ async function doLogin() {
     if (data.token) {
       T = data.token; U = data.user;
       localStorage.setItem('nms_tok', T); localStorage.setItem('nms_user', JSON.stringify(U));
-      CUR = 'dash'; render(); return;
+      CUR = 'dash';
+      const card = document.getElementById('login');
+      const done = () => { stopFlowBg(); render(); };
+      const reduceM = reducedMotion();
+      if (card && !reduceM) {
+        card.classList.add('lout'); setTimeout(done, 300);   // transisi keluar smooth
+      } else done();
+      return;
     }
     fail(data.error || 'Login gagal — periksa pengguna & kata sandi');
   } catch (e) { fail('Server tidak merespons — pastikan node server.js berjalan'); }
@@ -402,6 +586,60 @@ async function doLogin() {
   pEl.focus();
   if (pEl.select) pEl.select();
 }
+/* ===== Animasi: logout, halaman 404, brand typing =====
+   Semua modul memakai helper reducedMotion() + keyframes di style.css.            */
+function reducedMotion() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+// efek mengetik (brand / judul 404)
+function typeText(el, text, speed) {
+  if (!el) return;
+  if (reducedMotion() || !speed) { el.textContent = text; return; }
+  el.textContent = ''; el.classList.add('typing');
+  let i = 0;
+  const tick = () => {
+    if (i >= text.length) { el.classList.remove('typing'); return; }
+    el.textContent += text[i++];
+    setTimeout(tick, speed + Math.random() * speed * 0.6);
+  };
+  tick();
+}
+// efek scramble glitch (kode 404)
+function scramble(el, final) {
+  if (!el) return;
+  if (reducedMotion()) { el.textContent = final; return; }
+  const pool = '0123456789#@$%&*ABCDEFX';
+  let n = 0;
+  const iv = setInterval(() => {
+    el.textContent = Array.from(final).map((c, i) => (i < n ? c : pool[Math.floor(Math.random() * pool.length)])).join('');
+    if (++n > final.length + 3) { clearInterval(iv); el.textContent = final; }
+  }, 55);
+}
+/* ---------- halaman 404 ---------- */
+const NF_TXT = 'Halaman tidak ditemukan';
+function notFoundHtml(msg) {
+  return '<div id="nfWrap"><canvas id="lflow" aria-hidden="true"></canvas><div class="nf-card">'
+    + '<div class="nf-code" id="nfCode">404</div>'
+    + '<div class="nf-sig l-anim" style="--d:.14s"><span class="dot"></span>&#128246; Sinyal hilang &bull; paket tidak sampai ke tujuan</div>'
+    + '<h2 class="nf-title l-anim" id="nfTitle" style="--d:.22s"></h2>'
+    + '<p class="nf-msg mut l-anim" style="--d:.30s">' + (msg || 'Endpoint yang Anda tuju tidak tersedia di NMS Monitoring.') + '</p>'
+    + '<div class="nf-acts l-anim" style="--d:.38s">'
+    + '<button class="btn" onclick="nfHome()">&#127968; Kembali ke Dashboard</button>'
+    + '<button class="btn ghost" onclick="nfReload()">&#128260; Muat Ulang</button>'
+    + '</div></div></div>';
+}
+function wire404() {
+  startFlowBg();
+  scramble(document.getElementById('nfCode'), '404');
+  typeText(document.getElementById('nfTitle'), NF_TXT, 58);
+}
+function show404(msg) {
+  stopLive(); stopFlowBg();
+  const html = notFoundHtml(msg ? esc(String(msg)) : '');
+  if (T && U) app.innerHTML = shell(html, '');
+  else app.innerHTML = html;
+  wire404();
+}
+function nfHome() { if (T && U) { go('dash'); return; } location.href = '/'; }
+function nfReload() { location.reload(); }
 async function vUsers() {
   if (!canAdmin()) return go('dash');
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat users...</div>', 'users');
