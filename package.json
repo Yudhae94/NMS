@@ -14,7 +14,8 @@
     "dev": "node server.js",
     "tunnel": "cloudflared tunnel --url http://localhost:3000 --no-autoupdate",
     "online": "powershell -ExecutionPolicy Bypass -File scripts/online.ps1",
-    "verify": "node scripts/verify.js"
+    "verify": "node scripts/verify.js",
+    "check:responsive": "node scripts/device-check.js / /halaman-404-xyz"
   },
   "engines": {
     "node": ">=22.13.0"

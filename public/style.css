@@ -240,3 +240,216 @@ body.appbg main{padding-top:14px}
 @keyframes appbgIn{from{opacity:.35}to{opacity:1}}
 @media(max-width:900px){body.appbg{background-attachment:scroll}}
 
+/* ==========================================================================
+   RESPONSIF: TABLET & PONSEL
+   Layer tambahan (aditif) — tidak mengubah aturan di atas sama sekali.
+   Diurutkan dari besar ke kecil:
+     1. landscape ponsel   2. tablet portrait   3. tablet & ponsel umum
+     4. ponsel             5. ponsel kecil      6. sentuhan + aksesibilitas
+   ========================================================================== */
+
+/* ---------- 1. PONSONEL LANDSCAPE (tinggi pendek) ---------- */
+@media (max-width:1024px) and (orientation:landscape) and (max-height:520px){
+  #loginWrap{padding:14px}
+  .lw-grid{grid-template-columns:1fr 340px;gap:20px;max-width:900px}
+  .lw-title{font-size:clamp(21px,3.4vw,30px);min-height:1.1em}
+  .lw-sub{font-size:12.5px;line-height:1.5}
+  .lw-feats{display:none}
+  #login{padding:18px;border-radius:16px}
+  #login h3{margin:10px 0 2px;font-size:19px}
+  #login p.lsub{margin-bottom:13px}
+  #login .lform{gap:10px}
+  #login .inp input{padding:9px 2px}
+  #login .lgo{padding:10px;font-size:14px}
+  #login .lhelp{margin-top:12px;padding-top:9px}
+  .nf-card{padding:20px 18px}
+  .nf-code{font-size:clamp(48px,11vw,72px)}
+  .nf-title{font-size:19px;margin:10px 0 4px}
+  .nf-msg{margin-bottom:13px}
+}
+
+/* ---------- 2. TABLET PORTRAIT (768–1024px) ---------- */
+@media (min-width:768px) and (max-width:1024px){
+  main{padding:14px}
+  .topbar{padding:11px 16px;gap:12px}
+  .brand{font-size:17px}
+  .cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px}
+  .grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:11px}
+  .card h2{font-size:26px}
+  .panel{padding:13px}
+  svg#topo{height:360px}
+  .speedgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .ssid-cell{max-width:170px}
+}
+
+/* ---------- 3. TABLET & PONSEL UMUM (≤900px) ---------- */
+@media (max-width:900px){
+  /* topbar dua baris: brand+userchip di atas, menu penuh di bawah */
+  .topbar{gap:10px;padding:10px 12px}
+  .brand{font-size:17px;flex:1 1 auto;min-width:0}
+  .brand .bsub{font-size:11px;margin-left:4px}
+  .brand .logo{width:30px;height:30px;border-radius:9px;font-size:15px}
+  .userchip{margin-left:auto;padding:5px 10px;font-size:12px;flex:0 0 auto}
+
+  /* menu: baris penuh yang digeser mendatar, tidak memaksa wrap */
+  nav.menu{margin-left:0;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;
+    padding-bottom:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  nav.menu::-webkit-scrollbar{display:none}
+  nav.menu button{flex:0 0 auto;padding:9px 14px;font-size:13px;white-space:nowrap;
+    min-height:40px;touch-action:manipulation}
+
+  main{max-width:100%;padding:12px 10px calc(18px + env(safe-area-inset-bottom))}
+  .panel{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  .cards{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .card{padding:12px 13px;border-radius:14px}
+  .card h2{font-size:25px}
+  .grid{grid-template-columns:1fr;gap:10px}
+  .toolbar{gap:7px}
+  .btn{padding:10px 15px;min-height:40px;touch-action:manipulation}
+  .btn.sm{padding:8px 12px;min-height:36px}
+  input,select{padding:10px 12px;min-height:40px;font-size:16px} /* 16px cegah zoom iOS */
+  .toast{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom))}
+  .toast div{padding:11px 13px}
+}
+
+/* ---------- 4. PONSEL (≤640px) ---------- */
+@media (max-width:640px){
+  .topbar{padding:9px 10px;gap:8px}
+  .brand{font-size:15.5px;gap:8px}
+  .brand .logo{width:27px;height:27px;border-radius:8px;font-size:14px}
+  .brand .bsub{font-size:10px;margin-left:2px}
+  .userchip{font-size:11px;padding:4px 9px;gap:6px}
+  .userchip .dot{width:7px;height:7px}
+  .role{font-size:9.5px;padding:2px 6px}
+  nav.menu{gap:5px}
+  nav.menu button{padding:8px 12px;font-size:12.5px;min-height:38px}
+
+  main{padding:10px 8px calc(16px + env(safe-area-inset-bottom))}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .card{padding:11px 12px;border-radius:13px}
+  .card small{font-size:9.5px;letter-spacing:.4px}
+  .card h2{font-size:22px}
+  .panel{padding:11px;border-radius:13px}
+  .panel h4{font-size:14px;margin-bottom:8px}
+
+  /* tabel tetap bisa digeser, header menempel saat scroll vertikal */
+  table{font-size:12px;min-width:520px}
+  th{position:sticky;top:0;z-index:1}
+  td,th{padding:7px 5px}
+
+  .pill{padding:2px 8px;font-size:11px}
+  .grid{gap:9px}
+  .toolbar{margin-bottom:8px}
+  .btn{padding:10px 14px;font-size:14px}
+  .btn.sm{padding:8px 11px;font-size:12px}
+
+  /* speedtest & wifi */
+  .speedgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .speedgrid>div{padding:9px 10px;border-radius:11px}
+  .speedgrid h2{font-size:21px}
+  .speedgrid .subline{font-size:10px}
+  .speedmeta{font-size:11px;gap:6px}
+  .ssid-cell{max-width:120px}
+  .reco{flex-direction:column;gap:9px;align-items:stretch;padding:9px}
+  .reco-ch{min-width:0;width:100%;font-size:17px;padding:9px}
+  .pingbars{height:26px}
+  .pingbars i{width:5px}
+  svg#topo{height:250px}
+
+  /* login: satu kolom, rapatkan agar tidak perlu scroll jauh */
+  #loginWrap{padding:14px 12px calc(14px + env(safe-area-inset-bottom))}
+  .lw-grid{grid-template-columns:minmax(0,1fr);gap:14px;max-width:520px;
+    align-items:start;align-content:center}
+  .lw-hero{gap:7px}
+  .lw-badge{font-size:10px;padding:5px 11px;letter-spacing:1px}
+  .lw-title{font-size:clamp(22px,7.2vw,30px);line-height:1.1;
+    min-height:0;overflow-wrap:anywhere}
+  .lw-sub{font-size:12.5px;line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .lw-feats li{font-size:11px;padding:6px 10px}
+  .lw-meta{display:none}
+  #login{width:100%;padding:20px 17px;border-radius:18px}
+  #login h3{margin:12px 0 2px;font-size:20px}
+  #login .l-logo{width:46px;height:46px;font-size:23px;border-radius:14px}
+  #login .inp input{padding:11px 2px}
+  #login .lacc .btn{min-width:70px}
+
+  /* 404 */
+  .nf-card{padding:26px 18px;border-radius:20px}
+  .nf-code{font-size:clamp(56px,19vw,92px);-webkit-text-stroke:1.5px var(--down)}
+  .nf-title{font-size:21px}
+  .nf-msg{font-size:12.5px;max-width:34ch}
+  .nf-acts .btn{padding:10px 16px}
+}
+
+/* ---------- 5. PONSEL KECIL (≤380px) ---------- */
+@media (max-width:380px){
+  main{padding:9px 6px}
+  .brand{font-size:14.5px}
+  .brand .bsub{display:none}
+  .cards{grid-template-columns:1fr}
+  .speedgrid{grid-template-columns:1fr}
+  .card h2{font-size:20px}
+  nav.menu button{padding:7px 10px;font-size:12px}
+  #login{padding:17px 14px}
+  #login h3{font-size:18px}
+  .lw-meta{display:none}
+  .nf-code{font-size:clamp(48px,20vw,70px)}
+}
+
+/* ---------- 6. SENTUHAN & AKSESIBILITAS ---------- */
+/* target sentuh minimal 38–40px di layar sentuh */
+@media (pointer:coarse){
+  .btn,nav.menu button,.userchip{min-height:38px}
+  .btn.sm{min-height:34px}
+  .pill,.chip{min-height:26px;line-height:1.5}
+  #login .eye{min-width:38px;min-height:38px;display:inline-grid;place-items:center}
+  #login .lhelp summary{min-height:40px;display:flex;align-items:center;gap:8px}
+  #login .lacc .btn{min-height:38px}
+  tbody tr:hover td{background:transparent} /* hover tidak relevan di sentuh */
+}
+/* cegah gestur zoom saat pinch */
+@media (max-width:900px){ #app{touch-action:manipulation} }
+
+/* ---------- 7. NOTCH / SAFE AREA (iPhone & Android ber-notch) ---------- */
+@supports (padding:max(0px)){
+  .topbar{padding-top:calc(10px + env(safe-area-inset-top))}
+  .topbar{padding-left:calc(12px + env(safe-area-inset-left));
+          padding-right:calc(12px + env(safe-area-inset-right))}
+  main{padding-left:calc(10px + env(safe-area-inset-left));
+       padding-right:calc(10px + env(safe-area-inset-right))}
+  #loginWrap{padding-left:calc(14px + env(safe-area-inset-left));
+             padding-right:calc(14px + env(safe-area-inset-right))}
+}
+
+/* ---------- 8. ANTI LUBER HORIZONTAL (grid & tabel lebar) ----------
+   Item grid/panel punya min-width:auto secara default, jadi ikut melebar
+   mengikuti isi tabel yang min-width-nya besar. min-width:0 memaksa panel
+   tetap selebar kolom dan tabelnya bisa digeser DI DALAM panel.            */
+@media (max-width:1024px){
+  .grid,.cards,.speedgrid{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+  .grid>*,.cards>*,.speedgrid>*{min-width:0}
+  .panel{min-width:0;max-width:100%}
+  .topbar{min-width:0;max-width:100vw}
+  .brand,.userchip{min-width:0}
+  .brand .bl,.brand .bsub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .userchip{flex:0 1 auto;overflow:hidden}
+  .userchip .role{flex:0 0 auto}
+  #login,.lw-grid,.lw-hero,.nf-card{max-width:100%;min-width:0}
+  .lw-hero>*{max-width:100%}
+  .speedmeta>*{min-width:0}
+  svg#topo{max-width:100%}
+  .toast>div{max-width:100%}
+}
+/* di layar kecil: kolom tetap eksplisit (tidak auto-fit) agar 2 kolom selalu pas */
+@media (max-width:640px){
+  .cards,.speedgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:380px){
+  .cards,.speedgrid{grid-template-columns:minmax(0,1fr)}
+}
+
+
+
