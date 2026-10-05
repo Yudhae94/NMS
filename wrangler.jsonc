@@ -9,7 +9,7 @@
   // tetapi scripts\watchdog.ps1 otomatis memperbarui nilai ini lalu
   // deploy worker, jadi tidak perlu diedit manual.
   "vars": {
-    "ORIGIN_URL": "https://place-dot-doctrine-huntington.trycloudflare.com"
+    "ORIGIN_URL": "https://communications-sie-activity-apart.trycloudflare.com"
   },
 
   // Aset statis hanya dipakai sebagai fallback bila origin/tunnel mati.
