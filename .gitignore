@@ -36,9 +36,11 @@ README.md
 # kunci privat & kredensial (JANGAN pernah di-commit)
 deploy/id_rsa
 deploy/id_rsa.pub
+deploy/lightsail_key.pem
 *.pem
 *.key
 .oci/
+.aws/
 
 # harness QA sementara (one-off)
 public/_topo-qa.html

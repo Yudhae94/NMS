@@ -45,6 +45,53 @@ menampilkan IP-nya.
 Kalau `--check` bilang shape Always Free **tidak ada** di region Anda,
 coba region lain: `--region ap-southeast-1` atau `--region eu-frankfurt-1`.
 
+## 0a. Cara cepat: buat VPS AWS Lightsail otomatis
+
+Repo ini sudah menyertakan **AWS CLI + skrip pembuat instance**. Lightsail
+lebih gampang dari Oracle/EC2: **tidak ada** VCN/AMI yang ribet, IP publik
+dan firewall sudah bawaan.
+
+**Prasyarat:**
+
+```bash
+# 1. AWS CLI (sudah terpasang di laptop ini)
+aws --version
+
+# 2. Akun AWS & Access Key
+#    AWS Console > IAM > Security credentials > Create access key
+aws configure
+#    masukkan: Access Key ID, Secret Access Key, region (mis. ap-southeast-1),
+#              output json
+```
+
+**Buat VPS:**
+
+```bash
+# cek dulu: instance yang ada, pilihan bundle, blueprint Ubuntu
+node scripts/aws-create-vps.js --check
+
+# buat instance (512 MB, Ubuntu 22.04)
+node scripts/aws-create-vps.js --name nms-vps
+```
+
+Skrip otomatis: membuat key pair SSH → membuat instance → menunggu IP →
+mengatur firewall (hanya 22/80/443, rule default ditutup).
+
+**Lalu lanjut deploy seperti biasa:**
+
+```bash
+bash deploy/deploy-vps.sh root@IP_LIGHTSAIL
+ssh -i deploy/lightsail_key.pem root@IP_LIGHTSAIL
+# di VPS: cd /opt/nms && sudo bash deploy/setup-vps.sh "TOKEN_TUNNEL"
+```
+
+> ⚠️ **Billing Lightsail jalan terus selama instance menyala**, bukan hanya
+> saat dipakai. Kalau Free Tier habis, instance harus di-**Stop** dari console
+> (billing berhenti saat stopped, tapi IP & disk tetap ditagih sebagian).
+>
+> AWS Free Tier untuk Lightsail: **3 bulan** untuk akun baru
+> (bundle Linux kecil gratis selama periode itu).
+
 ## 1. Pilih VPS gratis
 
 Opsi yang umum dipakai (pilih salah satu):
