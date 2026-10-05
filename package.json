@@ -12,9 +12,14 @@
     "identify": "node scripts/identify-hosts.js",
     "cleanup-demo": "node scripts/cleanup-demo-alerts.js",
     "dev": "node server.js",
-    "tunnel": "cloudflared tunnel --url http://localhost:3000 --no-autoupdate",
-    "online": "powershell -ExecutionPolicy Bypass -File scripts/online.ps1",
+    "tunnel": "node scripts/tunnel-start.js",
+    "online": "powershell -ExecutionPolicy Bypass -File scripts/start-all.ps1",
+    "watchdog": "powershell -ExecutionPolicy Bypass -File scripts/watchdog.ps1",
+    "autostart": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1",
+    "autostart:off": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1 -Uninstall",
+    "deploy": "npx --yes wrangler@latest deploy",
     "verify": "node scripts/verify.js",
+    "verify:worker": "node scripts/worker-check.js",
     "check:responsive": "node scripts/device-check.js / /halaman-404-xyz"
   },
   "engines": {
