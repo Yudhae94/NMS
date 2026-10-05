@@ -33,6 +33,13 @@ README.md
 # cache/state lokal Cloudflare Wrangler
 .wrangler/
 
+# kunci privat & kredensial (JANGAN pernah di-commit)
+deploy/id_rsa
+deploy/id_rsa.pub
+*.pem
+*.key
+.oci/
+
 # harness QA sementara (one-off)
 public/_topo-qa.html
 scripts/_topo-*.js

@@ -13,6 +13,38 @@ Sesudah:  Browser → Cloudflare Edge → tunnel → VPS 24/7 (server.js + nms.d
 Data monitoring ikut pindah ke VPS (folder `data/` tidak ikut di-rsync,
 jadi database VPS mulai bersih lalu terisi sendiri).
 
+## 0. (Baru) Cara cepat: buat VM Oracle Cloud otomatis
+
+Repo ini sudah menyertakan **OCI CLI + skrip pembuat VM**. Jadi setelah
+akun Oracle Anda siap, tidak perlu klik-klik di console.
+
+**Prasyarat:** Python 3 + OCI CLI di laptop.
+
+```bash
+pip install oci-cli
+python -m oci setup config      # Tenancy OCID, User OCID, Fingerprint, Private key
+```
+
+**Buat VPS:**
+
+```bash
+# cek dulu: apakah shape Always Free tersedia di region Anda
+node scripts/oci-create-vm.js --check
+
+# generate SSH key (sekali saja)
+ssh-keygen -t ed25519 -f ./deploy/id_rsa -N ""
+
+# buat VM
+node scripts/oci-create-vm.js --name nms-vps --ssh-key ./deploy/id_rsa.pub
+```
+
+Skrip akan membuat VCN → subnet → internet gateway → **VM.Standard.E2.1.Micro**
+(Always Free, tidak pernah ditagih) dengan Ubuntu 22.04 + IP publik, lalu
+menampilkan IP-nya.
+
+Kalau `--check` bilang shape Always Free **tidak ada** di region Anda,
+coba region lain: `--region ap-southeast-1` atau `--region eu-frankfurt-1`.
+
 ## 1. Pilih VPS gratis
 
 Opsi yang umum dipakai (pilih salah satu):
@@ -97,7 +129,9 @@ curl localhost:3000/api/health       # cek server lokal
 | Gejala | Penyebab & Solusi |
 |---|---|
 | `Failed to start service: Permission denied` | `chown -R nms:nms /opt/nms` |
-| Tunnel `Registered tunnel connection` takmuncul | Token salah / belum diisi |
+| Tunnel `Registered tunnel connection` tak muncul | Token salah / belum diisi |
+| `Out of host memory` saat launch VM | Quota Always Free habis — cek Console > Limits |
+| `shape Always Free: TIDAK ADA` di `--check` | Coba region lain: `--region ap-southeast-1` |
 | Worker 502 setelah update | `ORIGIN_URL` di `wrangler.jsonc` belum di-deploy |
 | WiFi scan kosong di Linux | Perlu `sudo apt install network-manager` |
 | RAM habis | `MemoryMax=512M` sudah dipasang di service |
