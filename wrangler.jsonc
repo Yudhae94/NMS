@@ -5,6 +5,12 @@
   "compatibility_date": "2025-01-01",
   "observability": { "enabled": true },
 
+  // URL workers.dev dimatikan: website utama kini di Cloudflare Pages
+  // (https://nms-eov.pages.dev) sehingga nama akun tidak muncul di URL.
+  // Set workers_dev=true untuk menghidupkan kembali
+  // nms-monitoring.<akun>.workers.dev.
+  "workers_dev": false,
+
   // URL tunnel aktif. Tunnel quick (trycloudflare) BERGANTI setiap restart,
   // tetapi scripts\watchdog.ps1 otomatis memperbarui nilai ini lalu
   // deploy worker, jadi tidak perlu diedit manual.
