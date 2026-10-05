@@ -53,7 +53,8 @@ if (Has-Proc 'watchdog\.ps1' 'powershell.exe') {
 Start-Sleep -Seconds 6
 Write-Host ''
 Write-Host '  NMS ONLINE:' -ForegroundColor Green
-Write-Host '   https://nms-monitoring.yudhaekapratamay.workers.dev' -ForegroundColor White
+Write-Host '   https://nms-eov.pages.dev  (utama, tanpa nama akun)' -ForegroundColor White
+Write-Host '   https://nms-monitoring.yudhaekapratamay.workers.dev  (cadangan)' -ForegroundColor DarkGray
 if (Test-Path (Join-Path $logs 'tunnel-url.txt')) {
-  Write-Host ("   " + (Get-Content (Join-Path $logs 'tunnel-url.txt') -Raw).Trim()) -ForegroundColor DarkGray
+  Write-Host ("   tunnel: " + (Get-Content (Join-Path $logs 'tunnel-url.txt') -Raw).Trim()) -ForegroundColor DarkGray
 }

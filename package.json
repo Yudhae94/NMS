@@ -18,6 +18,7 @@
     "autostart": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1",
     "autostart:off": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1 -Uninstall",
     "deploy": "npx --yes wrangler@latest deploy",
+    "deploy:pages": "node scripts/pages-deploy.js",
     "verify": "node scripts/verify.js",
     "verify:worker": "node scripts/worker-check.js",
     "verify:menu": "node scripts/menu-check.js",

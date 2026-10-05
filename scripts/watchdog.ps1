@@ -103,10 +103,12 @@ function Sync-Worker($url) {
     git commit -m ('chore(online): sinkron ORIGIN_URL tunnel (' + $url + ')') 2>&1 | Out-Null
   }
   if ($NoDeploy) { return }
-  Say 'Deploy worker ke Cloudflare...'
-  npx --yes wrangler@latest deploy 2>&1 | Out-File -FilePath (Join-Path $logs 'deploy-wd.log') -Encoding UTF8
-  if ($LASTEXITCODE -eq 0) { Say 'Worker ter-deploy.' }
-  else { Say 'Deploy worker GAGAL (lihat logs\deploy-wd.log)' }
+  # Tunnel baru terbit -> URL tunnel berubah, jadi Pages pun perlu deploy ulang.
+  # (Secret ORIGIN_URL + aset statis disegarkan oleh scripts\pages-deploy.js)
+  Say 'Deploy ke Cloudflare Pages...'
+  node (Join-Path $PSScriptRoot 'pages-deploy.js') 2>&1 | Out-File -FilePath (Join-Path $logs 'deploy-wd.log') -Encoding UTF8
+  if ($LASTEXITCODE -eq 0) { Say 'Pages ter-deploy (https://nms-eov.pages.dev)' }
+  else { Say 'Deploy Pages GAGAL (lihat logs\deploy-wd.log)' }
 }
 
 $lastUrl = $null
