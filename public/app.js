@@ -77,7 +77,7 @@ function shell(inner, active) {
   const isA = U.role === 'admin' || U.role === 'superadmin', isO = U.role === 'operator' || isA;
   let ni = 0;
   const btn = (id, label) => '<button data-v="' + id + '" class="navbtn ' + (active === id ? 'on' : '') + '" style="--i:' + (ni++ * .045).toFixed(3) + 's" onclick="go(\'' + id + '\')">' + label + '</button>';
-  let nav = btn('dash', '&#128202; Dashboard') + btn('live', '&#128994; Live Traffic') + btn('dev', '&#128752; Devices') + btn('topo', '&#127760; Topologi') + btn('wifi', '&#128246; Kanal WiFi') + btn('alerts', '&#128276; Alerts') + btn('events', '&#128221; Events') + btn('flow', '&#8646; Flows') + btn('rep', '&#128203; Laporan') + btn('sla', '&#9989; SLA');
+  let nav = btn('dash', '&#128202; Dashboard') + btn('live', '&#128994; Live Traffic') + btn('dev', '&#128752; Devices') + btn('topo', '&#127760; Topologi') + btn('wifi', '&#128246; Kanal WiFi') + btn('net', '&#129517; Diagnostik') + btn('alerts', '&#128276; Alerts') + btn('events', '&#128221; Events') + btn('flow', '&#8646; Flows') + btn('rep', '&#128203; Laporan') + btn('sla', '&#9989; SLA');
   if (isA) nav += btn('users', '&#128100; Users') + btn('chan', '&#128225; Channels');
   if (isO) nav += btn('disc', '&#128269; Discovery');
   return '<header class="topbar"><div class="brand"><span class="logo">N</span><span class="bl">' + brandLetters('NMS') + '<span class="bsub">Monitoring</span></span></div>'
@@ -284,7 +284,7 @@ function render() {
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat...</div>', CUR);
   go(CUR);
 }
-function go(v) { stopLive(); CUR = v; ({ dash: vDash, live: vLive, dev: vDev, topo: vTopo, wifi: vWifi, alerts: vAlerts, events: vEvents, flow: vFlow, rep: vRep, sla: vSla, users: vUsers, chan: vChan, disc: vDisc }[v] || vDash)().catch((e) => { if (e.message === '__NF__') return; document.getElementById('c').innerHTML = '<div class="panel">Gagal memuat: ' + esc(e.message) + '</div>'; }); }
+function go(v) { stopLive(); CUR = v; ({ dash: vDash, live: vLive, dev: vDev, topo: vTopo, wifi: vWifi, net: vNet, alerts: vAlerts, events: vEvents, flow: vFlow, rep: vRep, sla: vSla, users: vUsers, chan: vChan, disc: vDisc }[v] || vDash)().catch((e) => { if (e.message === '__NF__') return; document.getElementById('c').innerHTML = '<div class="panel">Gagal memuat: ' + esc(e.message) + '</div>'; }); }
 let liveTimer = null;
 function stopLive() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
 // Jeda polling saat tab disembunyikan / proses tidak aktif: menghemat kuota
@@ -293,6 +293,7 @@ function pauseLiveWhenHidden() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopLive();
     else if (CUR === 'live' && !liveTimer) vLive().catch(() => {});
+    else if (CUR === 'topo' && !liveTimer) vTopo().catch(() => {});
   });
 }
 async function vLive() {
@@ -506,15 +507,290 @@ async function toggleMon(id, on) {
   try { await api('/api/devices/' + id, { method: 'PATCH', body: JSON.stringify({ monitored: on }) }); toast(on ? 'Poll diaktifkan' : 'Poll dimatikan'); vDev(); }
   catch (e) { toast(e.message, false); }
 }
+// ---- Peta topologi live: layout radial per-SSID (tiap SSID = gugus mengelilingi gateway) + kartu jumlah ----
+const LAN_GROUP = 'Kabel / LAN';
+const TOPO_W = 1240, TOPO_H = 760;      // viewBox cadangan saat data masih kosong
+const TOPO_LABEL_W = 118;               // lebar kira-kira teks nama perangkat (font 10.5px)
+// node yang bukan router/switch/ap = klien yang tersambung
+function isClient(n) { return !['router', 'switch', 'firewall', 'ap'].includes(n.type); }
+
+/**
+ * Jumlah & radius lingkaran klien dalam satu gugus. Lebih dari 8 klien dipecah jadi
+ * lingkaran konsentris supaya gugus tetap kompak; radius dihitung dari lebar teks
+ * nama/IP agar jarak antar klien tidak pernah lebih sempit dari tulisannya.
+ */
+function topoRingSizes(count) {
+  const ringCount = count <= 8 ? 1 : count <= 16 ? 2 : 3;
+  const per = Math.ceil(count / ringCount);
+  const sizes = [];
+  for (let left = count; left > 0; left -= per) sizes.push(Math.min(per, left));
+  return sizes;
+}
+function topoRadii(sizes) {
+  const out = [];
+  for (let i = 0; i < sizes.length; i++) {
+    const chord = (TOPO_LABEL_W + 22) / (2 * Math.sin(Math.PI / Math.max(2, sizes[i])));
+    out.push(Math.max(74, Math.ceil(chord), i ? out[i - 1] + 104 : 0)); // 104 = celah antar lingkaran
+  }
+  return out;
+}
+
+/**
+ * Tata letak radial per-SSID: gateway di pusat, tiap gugus WiFi (ruang sekcam, aula,
+ * bekasinyambungbae, ...) dijajarkan mengelilinginya pada elips dengan sudut sama besar.
+ * Jarak pusat gugus ke gateway dilebarkan otomatis sampai kotak zona tidak saling
+ * bertumpuk dan tidak menutupi gateway, sehingga peta tetap rapi berapa pun banyak
+ * SSID / perangkatnya. viewBox sendiri dihitung mengikuti isi (lihat topoViewBox).
+ */
+function topoLayout(nodes, links) {
+  const pos = {};
+  const routers = nodes.filter((x) => x.type === 'router');
+  const root = nodes.length
+    ? (routers.length ? routers : nodes).slice().sort((a, b) => (b.clients || 0) - (a.clients || 0))[0]
+    : null;
+  if (!root) return { pos, groups: [], root: null, center: [0, 0] };
+  pos[root.id] = [0, 0]; // gateway selalu di titik pusat
+
+  // kelompokkan node per SSID (klien saja; gateway tidak dihitung anggota zona)
+  const bucket = {};
+  for (const n of nodes) {
+    if (n.id === root.id) continue;
+    const key = n.ssid ? String(n.ssid) : LAN_GROUP;
+    (bucket[key] = bucket[key] || []).push(n);
+  }
+  const entries = Object.entries(bucket)
+    .sort((a, b) => (b[0] === LAN_GROUP ? 1 : 0) - (a[0] === LAN_GROUP ? 1 : 0) || b[1].length - a[1].length);
+
+  // geometri tiap gugus (posisi klien masih relatif terhadap pusat gugus)
+  const meta = [];
+  entries.forEach(([ssid, list], gi) => {
+    list.sort((a, b) => (isClient(b) - isClient(a)) || (b.clients || 0) - (a.clients || 0) || String(a.label || '').localeCompare(String(b.label || '')));
+    const sizes = topoRingSizes(list.length);
+    const radii = topoRadii(sizes);
+    let k = 0;
+    sizes.forEach((m, ri) => {
+      for (let i = 0; i < m; i++, k++) {
+        const a = ((i + 0.5) / m) * Math.PI * 2;
+        pos[list[k].id] = [radii[ri] * Math.cos(a), radii[ri] * Math.sin(a)];
+      }
+    });
+    const rOut = radii[radii.length - 1];
+    meta.push({
+      ssid, nodes: list, r: rOut,
+      halfW: rOut + TOPO_LABEL_W / 2 + 16, // ruang teks nama terpanjang di sisi kiri/kanan
+      halfH: rOut + 76,                     // ruang teks nama/IP/"n terhubung" di bawah node
+      color: AP_PAL[gi % AP_PAL.length],
+      down: list.filter((n) => n.status === 'down').length,
+      degraded: list.filter((n) => n.status === 'degraded').length,
+    });
+  });
+  if (!meta.length) return { pos, groups: [], root, center: [0, 0] };
+
+  // pusat gugus: elips mengelilingi gateway (sudut sama besar), jarak dilebarkan otomatis
+  const G = meta.length, off = G <= 2 ? 0 : 0.5;
+  const gap = 44, clear = 100; // celah antar zona + jarak aman dari gateway
+  const put = (ax) => {
+    const ay = ax * 0.66;
+    meta.forEach((g, i) => {
+      const th = (i + off) * (Math.PI * 2 / G);
+      g.cx = ax * Math.cos(th); g.cy = ay * Math.sin(th);
+      g.box = [g.cx - g.halfW, g.cy - g.halfH, g.cx + g.halfW, g.cy + g.halfH];
+    });
+  };
+  const collide = () => {
+    for (const g of meta) {
+      const dx = Math.max(g.box[0], -g.box[2], 0), dy = Math.max(g.box[1], -g.box[3], 0);
+      if (dx * dx + dy * dy < clear * clear) return true; // zona terlalu dekat gateway
+    }
+    for (let i = 0; i < meta.length; i++) for (let j = i + 1; j < meta.length; j++) {
+      const p = meta[i].box, q = meta[j].box;
+      const gx = Math.max(p[0] - q[2], q[0] - p[2]); // >0 = celah horizontal
+      const gy = Math.max(p[1] - q[3], q[1] - p[3]); // >0 = celah vertikal
+      if (Math.max(gx, gy) < gap) return true;       // bertumpuk bila kedua sumbu beririsan
+    }
+    return false;
+  };
+  let ax = 300;
+  put(ax);
+  for (let it = 0; it < 60 && collide(); it++) { ax = Math.min(2600, ax * 1.07); put(ax); }
+
+  // posisi klien relatif -> absolut
+  for (const g of meta) for (const n of g.nodes) {
+    const q = pos[n.id];
+    pos[n.id] = [g.cx + q[0], g.cy + q[1]];
+  }
+  return { pos, groups: meta, root, center: [0, 0] };
+}
+
+/** viewBox mengikuti isi (node + zona + label) supaya tidak ada ruang kosong / konten terpotong. */
+function topoViewBox(L) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const hit = (x, y, r) => { x0 = Math.min(x0, x - r); y0 = Math.min(y0, y - r); x1 = Math.max(x1, x + r); y1 = Math.max(y1, y + r); };
+  // zona: ruang untuk judul SSID + info jumlah klien di atas kotak
+  for (const g of L.groups || []) { hit(g.box[0], g.box[1], 46); hit(g.box[2], g.box[3], 46); }
+  // node: teks nama/IP/"n terhubung" di bawah + badge BARU di atas (root paling lebar)
+  for (const p of Object.values(L.pos)) hit(p[0], p[1], 76);
+  if (!isFinite(x0)) return { vb: '0 0 ' + TOPO_W + ' ' + TOPO_H, W: TOPO_W, H: TOPO_H };
+  const m = 16;
+  x0 -= m; y0 -= m; x1 += m; y1 += m;
+  let w = x1 - x0, h = y1 - y0;
+  // jaga proporsi tetap nyaman di layar (peta tidak pernah terlalu kecil/memipih)
+  const minW = 880, minH = 500;
+  if (w < minW) { const d = (minW - w) / 2; x0 -= d; w = minW; }
+  if (h < minH) { const d = (minH - h) / 2; y0 -= d; h = minH; }
+  return { vb: x0 + ' ' + y0 + ' ' + w + ' ' + h, W: w, H: h };
+}
+function topoNodeSvg(x, q, rootId) {
+  const col = x.status === 'up' ? '#22c55e' : x.status === 'down' ? '#ef4444' : x.status === 'degraded' ? '#f59e0b' : '#94a3b8';
+  const isRoot = x.id === rootId;
+  const r = isRoot ? 32 : (isClient(x) ? 19 : 24);
+  const clients = x.clients || 0;
+  const name = String(x.label || x.ip || '');
+  const short = name.length > 20 ? name.slice(0, 19) + '\u2026' : name;
+  const created = x.created_at ? Date.parse(String(x.created_at).replace(' ', 'T') + 'Z') : 0;
+  const isNew = created && Date.now() - created < 15 * 60000;
+  const tip = [name, x.ip + ' \u2022 ' + humanType(x.type),
+    'Status: ' + (x.status || 'unknown') + (x.latency != null ? ' \u2022 ' + x.latency + ' ms' : ''),
+    x.ssid ? 'WiFi: ' + x.ssid : '',
+    x.mac ? 'MAC: ' + x.mac : '', x.vendor ? 'Vendor: ' + x.vendor : '',
+    clients ? clients + ' perangkat terhubung' : '',
+    isNew ? 'BARU \u2014 terdeteksi < 15 menit' : ''].filter(Boolean).join('\n');
+  return '<g class="topo-node"><title>' + esc(tip) + '</title>'
+    + '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + (r + 8) + '" fill="' + col + '" opacity=".13"/>'
+    + '<circle class="topo-disc" cx="' + q[0] + '" cy="' + q[1] + '" r="' + r + '" fill="#0e1730" stroke="' + col + '" stroke-width="3">'
+    + (x.status === 'down' ? '<animate attributeName="stroke-opacity" values="1;.25;1" dur="1.4s" repeatCount="indefinite"/>' : '')
+    + '</circle>'
+    + '<text x="' + q[0] + '" y="' + (q[1] + 6) + '" font-size="' + (r >= 28 ? 20 : r >= 22 ? 16 : 13) + '" text-anchor="middle">' + (ICON[x.type] || ICON.host) + '</text>'
+    + '<circle cx="' + (q[0] + r * 0.72) + '" cy="' + (q[1] - r * 0.72) + '" r="5.5" fill="' + col + '" stroke="#0b1226" stroke-width="2"/>'
+    + (isNew ? '<g transform="translate(' + q[0] + ',' + (q[1] - r - 15) + ')"><rect x="-21" y="-9" width="42" height="17" rx="8.5" fill="#7c2d12" stroke="#f59e0b"/><text y="4" fill="#fbbf24" font-size="9" font-weight="bold" text-anchor="middle">BARU</text></g>' : '')
+    + '<text x="' + q[0] + '" y="' + (q[1] + r + 15) + '" fill="#e8eefc" font-size="10.5" font-weight="bold" text-anchor="middle">' + esc(short) + '</text>'
+    + '<text x="' + q[0] + '" y="' + (q[1] + r + 26) + '" fill="#93a1c4" font-size="9" text-anchor="middle">' + esc(x.ip) + '</text>'
+    + (clients ? '<text x="' + q[0] + '" y="' + (q[1] + r + 37) + '" fill="#7dd3fc" font-size="9" font-weight="bold" text-anchor="middle">' + clients + ' terhubung</text>' : '')
+    + '</g>';
+}
+function topoShell() {
+  const canScan = canW();
+  return '<div class="cards topo-stats" id="topoStats"></div>'
+    + '<div class="panel"><h4>Peta Topologi <span class="sub" id="topoMeta">memuat\u2026</span></h4>'
+    + '<div class="toolbar topo-tools">'
+    + (canScan ? '<button class="btn sm" id="topoScan" onclick="scanTopo()">&#128269; Scan sekarang</button>' : '')
+    + '<button class="btn sm ghost" onclick="vTopo()">&#128260; Muat ulang</button>'
+    + '<span class="topo-legend-inline"><i style="background:#22c55e"></i>online <i style="background:#f59e0b"></i>gangguan <i style="background:#ef4444"></i>error</span></div>'
+    + '<div class="topo-scroll" id="topoArea"></div>'
+    + '<div class="topo-groups" id="topoGroups"></div>'
+    + '<div class="topo-legend">'
+    + '<span><i style="background:#22c55e"></i> Online</span>'
+    + '<span><i style="background:#f59e0b"></i> Degraded / gagal dijangkau</span>'
+    + '<span><i style="background:#ef4444"></i> Down (error jaringan)</span>'
+    + '<span><i style="background:#94a3b8"></i> Belum dicek</span>'
+    + '<span><b style="color:#7dd3fc">n terhubung</b> = jumlah perangkat tersambung ke perangkat itu</span>'
+    + '<span><b style="color:#fbbf24">BARU</b> = perangkat baru terdeteksi &lt; 15 menit</span>'
+    + '<span><b style="color:#a3e635">zona</b> = gugus WiFi per ruangan (SSID)</span>'
+    + '</div>'
+    + '<p class="hint">Peta &amp; jumlah perangkat diperbarui otomatis tiap 5 detik. Perangkat baru yang tersambung di WiFi (mis. <b>ruang sekcam</b>, <b>aula</b>, <b>bekasinyambungbae</b>) langsung muncul di zona WiFi-nya + terdaftar otomatis; gangguan berulang otomatis ditandai <b>down</b> + alert, dan garis link-nya menjadi merah.</p></div>';
+}
+function renderTopo(t) {
+  const stats = document.getElementById('topoStats');
+  const area = document.getElementById('topoArea');
+  if (!stats || !area) return;
+  const c = t.counts || {};
+  const total = c.total || 0, up = c.up || 0, bad = (c.down || 0) + (c.degraded || 0);
+  const w = t.wifi;
+  const groups = t.groups || [];
+  const wifiGroups = groups.filter((g) => g.wireless);
+  const wifiClients = c.wifi_clients != null ? c.wifi_clients : wifiGroups.reduce((a, g) => a + g.total, 0);
+  stats.innerHTML = '<div class="card" style="--bar:#38bdf8"><small>Total Perangkat</small><h2>' + total + '</h2><span style="color:var(--mut)">' + (c.monitored || 0) + ' dipantau \u2605</span></div>'
+    + '<div class="card" style="--bar:#22c55e"><small>Terhubung / Online</small><h2 style="color:#4ade80">' + up + '</h2><span style="color:var(--mut)">dari ' + total + ' perangkat</span></div>'
+    + '<div class="card" style="--bar:#ef4444"><small>Jaringan Error</small><h2 style="color:#f87171">' + bad + '</h2><span style="color:var(--mut)">' + (c.down || 0) + ' down \u2022 ' + (c.degraded || 0) + ' degraded</span></div>'
+    + '<div class="card" style="--bar:#a3e635"><small>Klien WiFi</small><h2 style="color:#a3e635">' + wifiClients + '</h2><span style="color:var(--mut)">' + wifiGroups.length + ' zona WiFi</span></div>'
+    + '<div class="card" style="--bar:#f59e0b"><small>Perangkat Baru</small><h2 style="color:#fbbf24">' + (c.new_devices || 0) + '</h2><span style="color:var(--mut)">terdeteksi &lt; ' + (c.new_window_min || 15) + ' menit</span></div>'
+    + '<div class="card" style="--bar:#818cf8"><small>WiFi Terkoneksi</small><h2 style="font-size:17px">' + esc((w && w.ssid) || '\u2014') + '</h2><span style="color:var(--mut)">' + (w ? 'ch ' + (w.channel ?? '-') + ' \u2022 sinyal ' + (w.signal ?? '-') + '%' : 'belum terbaca') + '</span></div>';
+  const wt = t.watch || {};
+  const meta = document.getElementById('topoMeta');
+  if (meta) {
+    meta.textContent = 'update otomatis tiap 5 dtk \u2022 cek terakhir ' + (wt.last_scan ? new Date(wt.last_scan).toLocaleTimeString('id-ID') : '\u2014')
+      + ' \u2022 interval ' + Math.round((wt.interval_ms || 0) / 1000) + ' dtk \u2022 subnet ' + (wt.subnet || '\u2014')
+      + ' \u2022 ' + (t.links || []).length + ' link \u2022 ' + groups.length + ' grup';
+  }
+  const nodes = t.nodes || [], links = t.links || [];
+  const byId = {}; nodes.forEach((x) => { byId[x.id] = x; });
+  const L = topoLayout(nodes, links);
+
+  // zona per-SSID: kotak rounded + label nama WiFi + jumlah klien + status error
+  const zonesSvg = (L.groups || []).map((g) => {
+    const b = g.box;
+    const conn = w && w.ssid === g.ssid;
+    const stroke = g.down ? '#ef4444' : g.degraded ? '#f59e0b' : g.color;
+    const label = (g.ssid === LAN_GROUP ? 'KABEL / LAN' : String(g.ssid).toUpperCase());
+    const info = g.nodes.length + ' klien' + (g.down ? ' \u2022 ' + g.down + ' down' : '') + (g.degraded ? ' \u2022 ' + g.degraded + ' gangguan' : '');
+    return '<g class="topo-zone">'
+      + '<rect x="' + b[0] + '" y="' + b[1] + '" width="' + (b[2] - b[0]) + '" height="' + (b[3] - b[1]) + '" rx="22" fill="' + g.color + '" fill-opacity=".05" stroke="' + stroke + '" stroke-opacity=".45" stroke-width="1.6" stroke-dasharray="7 6"/>'
+      + '<text x="' + ((b[0] + b[2]) / 2) + '" y="' + (b[1] - 22) + '" fill="' + g.color + '" font-size="12" font-weight="bold" text-anchor="middle">' + esc(label) + (conn ? ' \u2022 TERHUBUNG' : '') + '</text>'
+      + '<text x="' + ((b[0] + b[2]) / 2) + '" y="' + (b[1] - 8) + '" fill="#93a1c4" font-size="10.5" text-anchor="middle">' + esc(info) + '</text>'
+      + '</g>';
+  }).join('');
+
+  // label port: cukup satu kali per port dan hanya bila garisnya panjang + tidak menabrak node
+  const portSeen = new Set();
+  const linksSvg = links.map((l) => {
+    const a = L.pos[l.from], b = L.pos[l.to];
+    if (!a || !b) return '';
+    const sa = (byId[l.from] || {}).status, sb = (byId[l.to] || {}).status;
+    const down = l.state === 'down' || sa === 'down' || sb === 'down';
+    const col = down ? '#ef4444' : (sa === 'degraded' || sb === 'degraded') ? '#f59e0b' : '#38bdf8';
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    let tag = '';
+    const key = l.from + '|' + l.src_port;
+    if (l.src_port && !portSeen.has(key) && Math.hypot(b[0] - a[0], b[1] - a[1]) >= 130
+      && !Object.values(L.pos).some((q) => Math.hypot(q[0] - mx, q[1] - my) < 64)) {
+      portSeen.add(key);
+      tag = '<text x="' + mx + '" y="' + (my - 4) + '" fill="#93a1c4" font-size="8.5" text-anchor="middle" paint-order="stroke" stroke="#0b1226" stroke-width="3">' + esc(l.src_port) + '</text>';
+    }
+    return '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + col + '" stroke-width="' + (down ? 2.6 : 2) + '" opacity="' + (down ? '.95' : '.6') + '" stroke-linecap="round"' + (down ? ' stroke-dasharray="6 5"' : '') + '/>'
+      + tag;
+  }).join('');
+  const nodesSvg = nodes.map((x) => { const q = L.pos[x.id]; return q ? topoNodeSvg(x, q, L.root ? L.root.id : 0) : ''; }).join('');
+  const vb = topoViewBox(L);
+  area.innerHTML = '<svg viewBox="' + vb.vb + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Peta topologi jaringan">' + zonesSvg + linksSvg + nodesSvg + '</svg>';
+
+  // kartu ringkas per WiFi: jumlah klien + status (untuk ruang sekcam, aula, dst.)
+  const gg = document.getElementById('topoGroups');
+  if (gg) {
+    gg.innerHTML = groups.length
+      ? groups.map((g) => '<div class="wifi-card" style="--wc:' + (g.down ? '#ef4444' : g.degraded ? '#f59e0b' : g.wireless ? '#a3e635' : '#64748b') + '">'
+        + '<div class="wc-h"><b>' + esc(g.ssid) + '</b>' + (g.connected ? '<span class="pill up">TERHUBUNG</span>' : '') + '</div>'
+        + '<div class="wc-n">' + g.total + ' <span>perangkat</span></div>'
+        + '<div class="wc-m">' + g.up + ' online \u2022 ' + g.down + ' down \u2022 ' + g.degraded + ' gangguan' + (g.new_devices ? ' \u2022 <b style="color:#fbbf24">' + g.new_devices + ' baru</b>' : '') + '</div></div>').join('')
+      : '<div class="wifi-card" style="--wc:#64748b"><div class="wc-h"><b>Belum ada perangkat terdeteksi</b></div><div class="wc-m">Jalankan “Scan sekarang” atau tunggu watcher mendeteksi perangkat yang tersambung WiFi (mis. ruang sekcam, aula, bekasinyambungbae).</div></div>';
+  }
+}
+async function scanTopo() {
+  const b = document.getElementById('topoScan');
+  if (b) { b.disabled = true; b.innerHTML = '&#8987; Memindai\u2026'; }
+  try {
+    const r = await api('/api/topology/scan', { method: 'POST' });
+    toast(r.skipped ? 'Scan sebelumnya masih berjalan' : ('Scan selesai: ' + r.alive + ' host aktif, ' + ((r.added || []).length) + ' perangkat baru, ' + ((r.down || []).length) + ' down'));
+    renderTopo(await api('/api/topology'));
+  } catch (e) { toast(e.message, false); }
+  if (b) { b.disabled = false; b.innerHTML = '&#128269; Scan sekarang'; }
+}
 async function vTopo() {
-  app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat topologi...</div>', 'topo');
-  const t = await api('/api/topology');
-  const n = t.nodes; const pos = {};
-  n.forEach((x, i) => { const a = (i / n.length) * Math.PI * 2; pos[x.id] = [400 + 280 * Math.cos(a), 205 + 155 * Math.sin(a)]; });
-  const L = t.links.map((l) => { const a = pos[l.from] || [50, 50], b = pos[l.to] || [100, 100]; return '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#38bdf8" stroke-width="2" opacity=".7"/><text x="' + ((a[0] + b[0]) / 2) + '" y="' + ((a[1] + b[1]) / 2 - 4) + '" fill="#93a1c4" font-size="9" text-anchor="middle">' + esc(l.src_port || '') + '</text>'; }).join('');
-  const real = n.filter((x) => x.monitored).length;
-  const N = n.map((x) => { const q = pos[x.id]; const col = x.status === 'up' ? '#22c55e' : x.status === 'down' ? '#ef4444' : '#f59e0b'; const r = x.monitored ? 26 : 18; const gl = { router: '&#128752;', laptop: '&#128187;', phone: '&#128241;', tv: '&#128250;', printer: '&#128424;' }[x.type] || '&#10068;'; return '<g><circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + r + '" fill="#0e1730" stroke="' + col + '" stroke-width="3"/><text x="' + q[0] + '" y="' + (q[1] + 6) + '" font-size="16" text-anchor="middle">' + gl + '</text><text x="' + q[0] + '" y="' + (q[1] + 40) + '" fill="#e8eefc" font-size="10" font-weight="bold" text-anchor="middle">' + esc(x.label) + '</text><text x="' + q[0] + '" y="' + (q[1] + 51) + '" fill="#93a1c4" font-size="9" text-anchor="middle">' + esc(x.ip) + '</text></g>'; }).join('');
-  document.getElementById('c').innerHTML = '<div class="panel"><h4>Peta Topologi <span class="sub">' + n.length + ' nodes (' + real + ' nyata ★) • ' + t.links.length + ' links • hijau=up merah=down kuning=degraded</span></h4><svg id="topo" viewBox="0 0 800 420">' + L + N + '</svg></div>';
+  stopLive();
+  if (!document.getElementById('topoArea')) {
+    app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat topologi...</div>', 'topo');
+  }
+  try {
+    const t = await api('/api/topology');
+    if (!document.getElementById('topoStats')) document.getElementById('c').innerHTML = topoShell();
+    renderTopo(t);
+    const tick = async () => {
+      if (CUR !== 'topo') { stopLive(); return; }
+      try { renderTopo(await api('/api/topology')); } catch { /* server sibuk — coba berikutnya */ }
+    };
+    if (!document.hidden) liveTimer = setInterval(tick, 5000);
+  } catch (e) {
+    document.getElementById('c').innerHTML = '<div class="panel">Gagal memuat topologi: ' + esc(e.message) + '</div>';
+  }
 }
 async function vAlerts() {
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat alerts...</div>', 'alerts');
@@ -541,6 +817,58 @@ async function vFlow() {
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat flows...</div>', 'flow');
   const r = await api('/api/flows?limit=50');
   document.getElementById('c').innerHTML = '<div class="grid"><div class="panel"><h4>Top Talkers <span class="sub">by bytes</span></h4><table><tr><th>Src IP</th><th>Bytes</th><th>Flows</th></tr>' + r.top_talkers.map((x) => '<tr><td>' + esc(x.src_ip) + '</td><td>' + fmtInt(x.b) + '</td><td>' + x.f + '</td></tr>').join('') + '</table></div><div class="panel"><h4>Flows Terbaru</h4><table><tr><th>Waktu</th><th>Src → Dst</th><th>Proto</th><th>Bytes</th></tr>' + r.rows.slice(0, 30).map((x) => '<tr><td style="white-space:nowrap">' + esc(x.ts) + '</td><td>' + esc(x.src_ip) + ':' + x.src_port + ' → ' + esc(x.dst_ip) + ':' + x.dst_port + '</td><td>' + pill(x.proto) + '</td><td>' + fmtInt(x.bytes) + '</td></tr>').join('') + '</table></div></div>';
+}
+async function vNet() {
+  stopLive();
+  app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat diagnostik...</div>', 'net');
+  let net = { interfaces: [], active: [], gateway: null, subnet: '-' };
+  try { net = await api('/api/net/active'); } catch (e) {}
+  const gw = (net.gateway && net.gateway.ip) || '-';
+  const act = (net.active || []).map((i) => '<tr><td><b>' + esc(i.name) + '</b></td><td>' + esc(i.ip) + '</td><td style="font-size:11px;color:var(--mut)">' + esc(i.mac || '-') + '</td><td>' + esc(i.cidr || ((i.prefix || '') + '.0/24')) + '</td></tr>').join('') || '<tr><td colspan="4" style="color:var(--mut)">Tidak ada interface aktif</td></tr>';
+  document.getElementById('c').innerHTML = '<div class="panel"><h4>&#129517; Diagnostik Jaringan <span class="sub">semua role: ping • traceroute • route print • koneksi aktif</span></h4>'
+    + '<div class="grid"><div class="panel"><h4>Koneksi Yang Dipakai</h4><table><tr><th>Interface</th><th>IP</th><th>MAC</th><th>Subnet</th></tr>' + act + '</table>'
+    + '<p class="hint">Gateway: <b>' + esc(gw) + '</b> &bull; Subnet: <b>' + esc(net.subnet || '-') + '</b></p>'
+    + '<div class="toolbar"><button class="btn sm" onclick="runSpeedtestUi2()">&#9889; Jalankan Speedtest</button> <button class="btn sm ghost" onclick="loadRoutes()">&#128203; Route Print</button></div><div id="speedRes2"></div></div>'
+    + '<div class="panel"><h4>Ping</h4><div class="toolbar"><input id="pingHost" class="inp" value="8.8.8.8" style="max-width:180px"> <button class="btn sm" onclick="runPing()">&#9654; Ping</button></div><pre id="pingOut" class="term">Belum dijalankan.</pre></div></div>'
+    + '<div class="grid"><div class="panel"><h4>Traceroute</h4><div class="toolbar"><input id="traceHost" class="inp" value="8.8.8.8" style="max-width:180px"> <button class="btn sm" onclick="runTrace()">&#9654; Traceroute</button></div><pre id="traceOut" class="term">Belum dijalankan.</pre></div>'
+    + '<div class="panel"><h4>Route Print</h4><div class="toolbar"><button class="btn sm ghost" onclick="loadRoutes()">&#128260; Muat Ulang</button></div><pre id="routeOut" class="term">Klik Route Print / Muat Ulang.</pre></div></div>';
+}
+async function runPing() {
+  const h = (document.getElementById('pingHost') || {}).value || '8.8.8.8';
+  const box = document.getElementById('pingOut');
+  if (box) box.textContent = 'Ping ' + h + ' ...';
+  try {
+    const r = await api('/api/net/ping', { method: 'POST', body: JSON.stringify({ target: h, count: 4 }) });
+    if (box) box.textContent = (r.stats ? 'sent=' + r.count + ' recv=' + r.stats.received + ' loss=' + r.stats.loss_pct + '% min/avg/max=' + r.stats.min + '/' + r.stats.avg + '/' + r.stats.max + ' ms\n\n' : (r.error || 'gagal\n\n')) + (r.output || '');
+    toast('Ping ' + h + (r.stats ? ': avg ' + r.stats.avg + ' ms' : ' selesai'));
+  } catch (e) { if (box) box.textContent = 'Gagal: ' + e.message; toast(e.message, false); }
+}
+async function runTrace() {
+  const h = (document.getElementById('traceHost') || {}).value || '8.8.8.8';
+  const box = document.getElementById('traceOut');
+  if (box) box.textContent = 'Traceroute ' + h + ' ... (bisa ±30 dtk)';
+  try {
+    const r = await api('/api/net/trace', { method: 'POST', body: JSON.stringify({ target: h }) });
+    if (box) box.textContent = r.output || r.error || '(kosong)';
+    toast('Traceroute ' + h + ' selesai');
+  } catch (e) { if (box) box.textContent = 'Gagal: ' + e.message; toast(e.message, false); }
+}
+async function loadRoutes() {
+  const box = document.getElementById('routeOut');
+  if (box) box.textContent = 'Memuat tabel routing ...';
+  try {
+    const r = await api('/api/net/routes');
+    if (box) box.textContent = r.output || '(kosong)';
+  } catch (e) { if (box) box.textContent = 'Gagal: ' + e.message; }
+}
+async function runSpeedtestUi2() {
+  const box = document.getElementById('speedRes2');
+  if (box) box.innerHTML = '<p><span class="spin"></span> Mengukur... (bisa ±30 detik)</p>';
+  try {
+    const r = await api('/api/speedtest', { method: 'POST' });
+    if (box) box.innerHTML = r.ok ? ('<p>Down <b>' + (r.down ? r.down.mbps : '-') + ' Mbps</b> • Up <b>' + (r.up ? r.up.mbps : '-') + ' Mbps</b> • Ping <b>' + r.ping.avg + ' ms</b> • Jitter <b>' + r.ping.jitter + ' ms</b>' + (r.isp ? ' • ' + esc(r.isp) : '') + '</p>') : ('<p>' + esc(r.note || 'gagal') + '</p>');
+    toast(r.ok ? ('Speedtest: down ' + (r.down ? r.down.mbps : '-') + ' Mbps') : (r.note || 'gagal'), !!r.ok);
+  } catch (e) { if (box) box.textContent = 'Gagal: ' + e.message; }
 }
 async function vDisc() {
   app.innerHTML = shell('<div class="panel"><span class="spin"></span> Memuat discovery...</div>', 'disc');
@@ -827,7 +1155,7 @@ function speedHtml(sp) {
       + '<td>' + (x.up_mbps == null ? '-' : fmtMbps(x.up_mbps) + ' Mbps') + '</td>'
       + '<td>' + gradePill(x.grade) + '</td></tr>').join('') + '</table>' : '';
   return '<div class="panel"><h4>Speedtest WiFi / LAN <span class="sub">koneksi yang sedang dipakai perangkat ini</span></h4>'
-    + '<div class="toolbar">' + (canRun ? '<button class="btn sm" onclick="runSpeedtestUi()">&#9889; Jalankan Speedtest</button>' : '<span style="color:var(--mut)">Mode read-only (viewer)</span>') + '</div>'
+    + '<div class="toolbar">' + '<button class="btn sm" onclick="runSpeedtestUi()">&#9889; Jalankan Speedtest</button>' + '</div>'
     + '<p class="hint">&#177;10 ping ke gateway + internet, unduh &#177;5 MB, unggah &#177;1 MB (bisa &#177;30 dtk). Nama <b>ISP</b> &amp; IP publik dibaca dari penyedia info IP publik.</p>'
     + '<div id="speedRes">' + body + '</div>' + hrows + '</div>';
 }

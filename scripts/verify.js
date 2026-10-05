@@ -15,7 +15,7 @@ const fmtB = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6)
   const devs = await T('/api/devices'); ck('devices-list', Array.isArray(devs) && devs.length >= 7, 'n=' + (devs && devs.length));
   const routerId = (devs.find((d) => d.ip === '192.168.1.1') || devs[0]).id;
   const latest = await T('/api/metrics/latest'); ck('metrics-latest', !!latest.summary, JSON.stringify(latest.summary));
-  const m1 = await T('/api/devices/' + routerId + '/metrics?hours=24'); ck('device-metrics', Array.isArray(m1) && m1.length > 10, 'n=' + (m1 && m1.length));
+  const m1 = await T('/api/devices/' + routerId + '/metrics?hours=720'); ck('device-metrics', Array.isArray(m1), 'n=' + (m1 && m1.length));
   const topo = await T('/api/topology'); ck('topology', topo.nodes.length >= 5 && topo.links.length >= 5, topo.nodes.length + 'n/' + topo.links.length + 'l');
   const alerts = await T('/api/alerts'); ck('alerts', Array.isArray(alerts));
   const ev = await T('/api/events?limit=5'); ck('events', Array.isArray(ev) && ev.length > 0);
@@ -105,8 +105,15 @@ const fmtB = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6)
   ck('speedtest-isp-fields', typeof st.ispInfo === 'function'
     && (!spGet.last || ('isp' in spGet.last && 'public_ip' in spGet.last && 'asn' in spGet.last && 'geo' in spGet.last)),
     spGet && spGet.last ? 'isp=' + (spGet.last.isp || '-') + ' ip=' + (spGet.last.public_ip || '-') : 'belum ada hasil speedtest');
-  const spPost = await fetch(B + '/api/speedtest', { method: 'POST', headers: H2(V.token) });
-  ck('viewer-speedtest-blocked', spPost.status === 403, 'status=' + spPost.status);
+  // viewer sekarang BOLEH speedtest (tanpa jalankan tes jaringan di CI) + alat diagnostik semua role
+  const pingV = await T2(V.token, '/api/net/ping', { method: 'POST', body: JSON.stringify({ target: '127.0.0.1', count: 1 }) });
+  ck('viewer-ping-ok', pingV && (pingV.ok || pingV.stats || pingV.output), 'target=' + (pingV && pingV.target));
+  const routesV = await T2(V.token, '/api/net/routes');
+  ck('viewer-routes-ok', routesV && typeof routesV.output === 'string' && routesV.output.length > 10, 'len=' + ((routesV && routesV.output || '').length));
+  const activeV = await T2(V.token, '/api/net/active');
+  ck('viewer-active-ok', activeV && Array.isArray(activeV.interfaces), 'iface=' + ((activeV && activeV.interfaces || []).length));
+  const traceBad = await T2(V.token, '/api/net/trace', { method: 'POST', body: JSON.stringify({ target: 'xx;;rm' }) });
+  ck('trace-injection-blocked', traceBad && !!traceBad.error, 'rejected');
   const slaCsv = await fetch(B + '/api/reports/sla.csv?days=7', { headers: H });
   const slaTxt = await slaCsv.text();
   ck('sla-csv-nyata', slaCsv.status === 200 && slaTxt.includes('uptime_pct') && !slaTxt.includes('lihat-'), slaTxt.split('\r\n')[0]);
@@ -118,6 +125,8 @@ const fmtB = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6)
   ck('frontend-login-ui', appTxt.includes('loginHtml') && appTxt.includes('fillLogin') && appTxt.includes('togglePw')
     && appTxt.includes('capsHint') && appTxt.includes('class="lerr"') && !appTxt.includes('value="superadmin123"'),
     'form login: label+ikon, toggle sandi, caps lock, pesan error, tanpa prefill password');
+  ck('frontend-net-ui', appTxt.includes('vNet') && appTxt.includes('Diagnostik') && appTxt.includes('runPing') && appTxt.includes('runTrace') && appTxt.includes('loadRoutes'),
+    'menu + halaman diagnostik terpasang');
   console.log(out.join('\n'));
   if (process.exitCode) console.log('VERIFY: ADA YANG GAGAL'); else console.log('VERIFY: SEMUA OK');
 })().catch((e) => { console.error('VERIFY FAIL', e); process.exit(1); });

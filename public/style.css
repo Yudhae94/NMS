@@ -226,6 +226,9 @@ canvas#sp24,canvas#sp5,canvas#sp6{width:100%;background:#0a1024;border:1px solid
 .ssid-cell{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .speedmeta{color:var(--mut);font-size:12px;margin:6px 0;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
 .speedmeta b{color:var(--tx)}
+/* diagnostik jaringan: ping / traceroute / route print */
+.term{background:#070d1f;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:12px/1.55 Consolas,monospace;color:#c7e0ff;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow:auto;margin:8px 0 0}
+input.inp{background:#0e1730;border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--tx)}
 .pingbars{display:inline-flex;align-items:flex-end;gap:2px;height:34px;padding:4px 6px;background:#0e1730;border:1px solid var(--line);border-radius:8px}
 .pingbars i{width:6px;border-radius:2px;display:inline-block}
 @media(max-width:640px){main{padding:10px}.card h2{font-size:24px}}
@@ -451,5 +454,33 @@ body.appbg main{padding-top:14px}
   .cards,.speedgrid{grid-template-columns:minmax(0,1fr)}
 }
 
-
-
+/* ---- Topologi live: kartu statistik, peta hierarkis, legend ---- */
+.topo-stats{margin-bottom:12px}
+.topo-stats .card h2{font-size:26px}
+.topo-tools{margin-bottom:10px;flex-wrap:wrap}
+.topo-scroll{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+.topo-scroll svg{display:block;width:100%;min-width:680px;max-width:1240px;height:auto;margin:0 auto}
+.topo-scroll svg{max-height:70vh}
+.topo-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;color:var(--mut);font-size:12px;align-items:center}
+.topo-legend span{display:inline-flex;align-items:center;gap:6px}
+.topo-legend i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.topo-node .topo-disc{transition:stroke-width .15s ease}
+.topo-node:hover .topo-disc{stroke-width:5}
+/* zona per-SSID + kartu ringkas per WiFi (ruang sekcam, aula, dst.) */
+.topo-zone rect{transition:stroke-opacity .2s ease}
+.topo-zone:hover rect{stroke-opacity:.9}
+.topo-legend-inline{display:inline-flex;align-items:center;gap:6px;color:var(--mut);font-size:11.5px}
+.topo-legend-inline i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:8px}
+.topo-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.wifi-card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:#0e1730}
+.wifi-card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--wc,var(--acc))}
+.wifi-card .wc-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.wifi-card .wc-h b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wifi-card .wc-n{font-size:26px;font-weight:800;margin:5px 0 1px;font-variant-numeric:tabular-nums}
+.wifi-card .wc-n span{font-size:12px;font-weight:400;color:var(--mut)}
+.wifi-card .wc-m{color:var(--mut);font-size:11.5px}
+@media (max-width:640px){
+  .topo-scroll svg{min-width:560px}
+  .topo-legend{gap:6px 12px;font-size:11px}
+  .topo-groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+}

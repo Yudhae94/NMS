@@ -163,6 +163,12 @@ async function router(req, res) {
   return send(res, 404, { error: 'Not found' });
 }
 const server = http.createServer(router);
-if (require.main === module) server.listen(PORT, () => console.log('[NMS API] http://localhost:' + PORT));
+if (require.main === module) server.listen(PORT, () => {
+  console.log('[NMS API] http://localhost:' + PORT);
+  // topology watch: deteksi perangkat baru + gangguan jaringan otomatis (TOPO_WATCH=0 untuk mematikan)
+  if (process.env.TOPO_WATCH !== '0') {
+    try { require('./lib/topo-watch').startWatch(); } catch (e) { console.error('[topo-watch] gagal start:', e.message); }
+  }
+});
 module.exports = { server, sign, verify };
 

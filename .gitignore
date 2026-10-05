@@ -27,3 +27,6 @@ npm-debug.log*
 Thumbs.db
 README.md
 
+# cache browser Chrome/Edge dipakai skrip QA otomatis (jangan di-commit)
+.chrome-qa*/
+
