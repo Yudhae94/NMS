@@ -47,12 +47,8 @@ export default {
         fresh.headers.set('X-NMS-Cache', 'HIT');
         return fresh;
       }
-      let res;
-      try {
-        res = await fetch(new Request(target, request), { redirect: 'manual' });
-      } catch {
-        return staticFallback(request, env, 502, 'Origin NMS tidak dapat dihubungi (tunnel mati?).');
-      }
+      const res = await fetchOrigin(target, request);
+      if (!res) return staticFallback(request, env, 502, 'Origin NMS tidak dapat dihubungi (tunnel mati?).');
       // hanya 200 + JSON yang di-cache; 401/403/5xx diteruskan apa adanya
       const ct = res.headers.get('Content-Type') || '';
       if (res.status === 200 && ct.includes('json')) {
@@ -62,16 +58,17 @@ export default {
         ctx.waitUntil(cache.put(key, cached.clone()));
         return cached;
       }
+      // Origin yang balas 5xx (mis. 530 Origin DNS error saat tunnel mati):
+      // sajikan fallback statis agar halaman login tetap bisa dibuka.
+      if (res.status >= 500) return staticFallback(request, env, 502, 'Origin NMS sedang tidak tersedia (tunnel mati?).');
       return res;
     }
 
     // ---- 3. HTML & sisanya: selalu live ----
-    let res;
-    try {
-      res = await fetch(new Request(target, request), { redirect: 'manual' });
-    } catch {
-      return staticFallback(request, env, 502, 'Origin NMS tidak dapat dihubungi (tunnel mati?).');
-    }
+    const res = await fetchOrigin(target, request);
+    if (!res) return staticFallback(request, env, 502, 'Origin NMS tidak dapat dihubungi (tunnel mati?).');
+    // Tunnel mati -&gt; edge balas 530; ganti dengan aset statis agar UI tetap tampil.
+    if (res.status >= 500) return staticFallback(request, env, 502, 'Origin NMS sedang tidak tersedia (tunnel mati?).');
 
     if (request.method === 'GET' && !isApi && /\.html?$/i.test(url.pathname)) {
       const out = new Response(res.body, res);
@@ -81,6 +78,22 @@ export default {
     return res;
   },
 };
+
+/**
+ * Ambil dari origin. Mengembalikan null bila gagal.
+ * PENTING: tunnel yang mati tidak melempar error dari fetch(), Cloudflare
+ * justru mengembalikan respons 5xx (530 Origin DNS error). Respons seperti
+ * ini harus dianggap "origin tidak hidup" agar fallback statis dipakai.
+ */
+async function fetchOrigin(target, request) {
+  try {
+    const res = await fetch(new Request(target, request), { redirect: 'manual' });
+    if (res.status === 530 || res.status === 502 || res.status === 503) return null;
+    return res;
+  } catch {
+    return null;
+  }
+}
 
 /** Layani aset dari binding ASSETS dengan header cache yang tepat. */
 async function serveAsset(env, request, url) {
