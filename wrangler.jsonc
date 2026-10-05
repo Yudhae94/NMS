@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nms-monitoring",
+  "main": "worker.js",
+  "compatibility_date": "2025-01-01",
+  "observability": { "enabled": true },
+
+  // URL tunnel aktif. Tunnel quick (trycloudflare) BERGANTI setiap restart,
+  // tetapi scripts\watchdog.ps1 otomatis memperbarui nilai ini lalu
+  // deploy worker, jadi tidak perlu diedit manual.
+  "vars": {
+    "ORIGIN_URL": "https://place-dot-doctrine-huntington.trycloudflare.com"
+  },
+
+  // Aset statis hanya dipakai sebagai fallback bila origin/tunnel mati.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "run_worker_first": true
+  }
+}
