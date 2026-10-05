@@ -8,7 +8,7 @@
   // URL tunnel aktif. Tunnel quick (trycloudflare) BERGANTI setiap restart â€”
   // jalankan ulang `npm run tunnel` lalu perbarui nilai di sini & commit ulang.
   "vars": {
-    "ORIGIN_URL": "https://recent-partition-internal-dressing.trycloudflare.com"
+    "ORIGIN_URL": "https://frequently-sentences-motorola-induced.trycloudflare.com"
   },
 
   // Aset statis hanya dipakai sebagai fallback bila origin/tunnel mati.

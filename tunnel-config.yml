@@ -1,0 +1,10 @@
+# Ingress tunnel Cloudflare (nama tunnel: nms)
+# Jalankan:  npx wrangler tunnel run nms
+# Tunnel permanen: URL https://nms.<subdomain>.cfargotunnel.com tidak berubah saat restart.
+tunnel: 13df7d8f-586b-46f0-b56e-b157f0cbd33c
+credentials-file: C:/Users/Yudhaeka12/AppData/Roaming/xdg.config/.cloudflared/13df7d8f-586b-46f0-b56e-b157f0cbd33c.json
+
+ingress:
+  - hostname: nms.yudhaekapratamay.com
+    service: http://localhost:3000
+  - service: http_status:404
