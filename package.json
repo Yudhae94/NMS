@@ -20,6 +20,9 @@
     "deploy": "npx --yes wrangler@latest deploy",
     "verify": "node scripts/verify.js",
     "verify:worker": "node scripts/worker-check.js",
+    "verify:menu": "node scripts/menu-check.js",
+    "verify:layout": "node scripts/layout-check.js",
+    "verify:edge": "node scripts/edge-check.js",
     "check:responsive": "node scripts/device-check.js / /halaman-404-xyz"
   },
   "engines": {

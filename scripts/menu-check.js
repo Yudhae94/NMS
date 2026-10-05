@@ -66,7 +66,7 @@ for (const [nama, cek] of [
   ['label kategori menu', sample.includes('class="mlabel"')],
   ['CSS .sidebar fixed', /\.sidebar\{position:fixed/.test(css)],
   ['CSS drawer di layar kecil', css.includes('body.sb-open .sidebar{transform:translateX(0)}')],
-  ['CSS konten digeser sidebar', css.includes('--sb-w') && css.includes('calc(var(--sb-w) + 16px)')],
+  ['CSS konten digeser sidebar', /margin:\s*0 auto 0 var\(--sb-w\)/.test(css)],
   ['CSS kurung kurawal seimbang', (css.match(/{/g) || []).length === (css.match(/}/g) || []).length],
   ['sisa aturan .topbar dibuang', !/\.topbar\{/.test(css)],
 ]) {

@@ -49,8 +49,9 @@ nav.menu button.navbtn{animation:lfNav .42s cubic-bezier(.22,.85,.3,1) backwards
 .sb-toggle{position:fixed;top:12px;left:12px;z-index:40;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:rgba(13,23,48,.94);color:var(--tx);font-size:19px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .sb-toggle:hover{background:#1b2a4d}
 .sb-scrim{position:fixed;inset:0;z-index:25;background:rgba(6,10,24,.62);backdrop-filter:blur(2px)}
-/* konten digeser ke kanan sebesar sidebar */
-main{max-width:1280px;margin:0 auto;padding:16px 16px 16px calc(var(--sb-w) + 16px)}
+/* konten digeser ke kanan sebesar sidebar (bukan sekadar dipadding,
+   agar kartu/panel lebar tidak pernah tersembunyi di belakang sidebar) */
+main{max-width:1320px;margin:0 auto 0 var(--sb-w);padding:16px}
 /* logout: sidebar ikut meredup */
 .sidebar{transition:opacity .34s ease,transform .34s ease,filter .34s ease}
 body.byeing .sidebar{opacity:0;transform:translateX(-16px);filter:blur(7px)}
@@ -68,7 +69,6 @@ body.byeing main{opacity:0;transform:translateY(-16px) scale(.985);filter:blur(7
   .sidebar .brand{padding:12px 14px;font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){.sidebar,body.sb-open .sidebar{transition:none}}
-main{max-width:1280px;margin:0 auto;padding:16px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:4px 0 14px}
 .card{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:14px 16px}
 .card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bar,var(--acc))}
@@ -316,7 +316,8 @@ body.appbg main{padding-top:16px}
 
 /* ---------- 2. TABLET PORTRAIT (768–1024px) ---------- */
 @media (min-width:768px) and (max-width:1024px){
-  main{padding:14px}
+  /* sidebar masih tampil (>900px): offset kiri wajib dipertahankan */
+  main{padding:14px;margin-left:var(--sb-w)}
   .sidebar .brand{padding:11px 14px;gap:9px}
   .brand{font-size:17px}
   .cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px}
@@ -344,7 +345,7 @@ body.appbg main{padding-top:16px}
   .sidebar .sb-foot .navbtn{min-height:44px}
   .sidebar .mlabel{padding:12px 10px 4px}
 
-  main{max-width:100%;padding:62px 10px calc(18px + env(safe-area-inset-bottom))}
+  main{max-width:100%;padding:62px 10px calc(18px + env(safe-area-inset-bottom));margin-left:0}
   .panel{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
   .cards{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
@@ -371,7 +372,7 @@ body.appbg main{padding-top:16px}
   .sidebar nav.menu{gap:2px;padding:6px 6px 12px}
   .sidebar nav.menu button{padding:10px 11px;font-size:13.5px;min-height:44px}
 
-  main{padding:62px 8px calc(16px + env(safe-area-inset-bottom))}
+  main{padding:62px 8px calc(16px + env(safe-area-inset-bottom));margin-left:0}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .card{padding:11px 12px;border-radius:13px}
   .card small{font-size:9.5px;letter-spacing:.4px}
