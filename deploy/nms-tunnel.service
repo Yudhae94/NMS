@@ -1,0 +1,19 @@
+[Unit]
+Description=NMS Monitoring - Cloudflare Tunnel (publish ke internet)
+After=network-online.target nms.service
+Wants=network-online.target
+Requires=nms.service
+
+[Service]
+Type=simple
+User=nms
+Group=nms
+WorkingDirectory=/opt/nms
+ExecStart=/opt/nms/scripts/tunnel-service.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/nms/tunnel.log
+StandardError=append:/var/log/nms/tunnel.err.log
+
+[Install]
+WantedBy=multi-user.target

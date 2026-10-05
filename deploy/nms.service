@@ -1,0 +1,23 @@
+[Unit]
+Description=NMS Monitoring - server API (port 3000)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nms
+Group=nms
+WorkingDirectory=/opt/nms
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=TOPO_WATCH=1
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+MemoryMax=512M
+CPUQuota=80%
+StandardOutput=append:/var/log/nms/server.log
+StandardError=append:/var/log/nms/server.err.log
+
+[Install]
+WantedBy=multi-user.target
