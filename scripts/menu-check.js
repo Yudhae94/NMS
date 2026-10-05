@@ -56,5 +56,23 @@ const okAktif = aktif === 1 && on === 1;
 if (!okAktif) bad++;
 console.log((okAktif ? 'PASS ' : 'FAIL ') + 'halaman aktif ditandai (aria-current=' + aktif + ', class on=' + on + ')');
 
+// struktur sidebar + CSS pendukung
+const css = fs.readFileSync('public/style.css', 'utf8');
+for (const [nama, cek] of [
+  ['struktur <aside class="sidebar">', sample.includes('<aside class="sidebar"')],
+  ['tombol hamburger untuk layar kecil', sample.includes('class="sb-toggle"')],
+  ['penutup (scrim) sidebar', sample.includes('id="sbScrim"')],
+  ['fungsi navPick/toggleSidebar', src.includes('function navPick') && src.includes('function toggleSidebar')],
+  ['label kategori menu', sample.includes('class="mlabel"')],
+  ['CSS .sidebar fixed', /\.sidebar\{position:fixed/.test(css)],
+  ['CSS drawer di layar kecil', css.includes('body.sb-open .sidebar{transform:translateX(0)}')],
+  ['CSS konten digeser sidebar', css.includes('--sb-w') && css.includes('calc(var(--sb-w) + 16px)')],
+  ['CSS kurung kurawal seimbang', (css.match(/{/g) || []).length === (css.match(/}/g) || []).length],
+  ['sisa aturan .topbar dibuang', !/\.topbar\{/.test(css)],
+]) {
+  if (!cek) bad++;
+  console.log((cek ? 'PASS ' : 'FAIL ') + nama);
+}
+
 console.log(bad ? 'MENU-CHECK: ADA YANG GAGAL' : 'MENU-CHECK: SEMUA OK');
 process.exit(bad ? 1 : 0);

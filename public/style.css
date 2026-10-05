@@ -2,7 +2,6 @@
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;color:var(--tx);font-family:'Segoe UI',system-ui,Arial,sans-serif;background:radial-gradient(1200px 500px at 80% -10%,#1e2a5e 0%,transparent 60%),radial-gradient(900px 420px at 10% 0%,#0e3a5e 0%,transparent 55%),linear-gradient(180deg,var(--bg),var(--bg2))}
 a{color:var(--acc)}
-.topbar{position:sticky;top:0;z-index:10;display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:rgba(10,16,34,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:.3px}
 .brand .bl{display:inline-flex;align-items:baseline;background:linear-gradient(90deg,var(--acc),var(--acc2) 45%,var(--up));
   -webkit-background-clip:text;background-clip:text;color:transparent;background-size:220% 100%;
@@ -18,31 +17,57 @@ nav.menu button.navbtn{animation:lfNav .42s cubic-bezier(.22,.85,.3,1) backwards
 .userchip{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#0e1730;font-size:13px}
 .userchip .dot{width:9px;height:9px;border-radius:50%;background:var(--up)}
 .role{font-size:11px;padding:2px 8px;border-radius:999px;background:#24346b;color:#cdd8ff;text-transform:uppercase}
-/* ===== menu navigasi: rapi, tergrup, responsif ===== */
-nav.menu{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin-left:auto;padding:3px;border-radius:14px;background:rgba(8,14,30,.5);border:1px solid var(--line)}
-nav.menu button{position:relative;border:1px solid transparent;background:transparent;color:var(--mut);padding:7px 12px;border-radius:11px;cursor:pointer;font:inherit;font-weight:600;font-size:13px;line-height:1.2;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background .16s,color .16s,border-color .16s,transform .16s}
-nav.menu button:hover{background:#22305c;color:var(--tx)}
-nav.menu button:active{transform:translateY(1px)}
-nav.menu button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-/* garis penanda tombol aktif di bawah */
-nav.menu button .gl{position:absolute;left:50%;bottom:3px;width:0;height:2px;border-radius:2px;background:var(--acc);transform:translateX(-50%);transition:width .22s cubic-bezier(.22,.85,.3,1)}
-nav.menu button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#06121f;border-color:transparent;box-shadow:0 4px 14px rgba(56,189,248,.25)}
-nav.menu button.on:hover{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#06121f}
-nav.menu button.on .gl{width:26px;background:rgba(6,18,31,.55)}
-/* pemisah antar kelompok menu */
-nav.menu .msep{width:1px;height:20px;background:var(--line);margin:0 5px;flex:0 0 auto}
-nav.menu button.danger{color:#fca5a5}
-nav.menu button.danger:hover{background:#5b1d28;color:#fff}
-/* di layar sempit: tombol lebih rapat, pemisah disembunyikan */
-@media(max-width:1180px){
-  nav.menu{width:100%;margin-left:0;justify-content:flex-start}
-  nav.menu .msep{display:none}
-  nav.menu button{padding:6px 10px;font-size:12.5px}
+/* ===== SIDEBAR: menu vertikal, rapi & responsif ===== */
+:root{--sb-w:248px}
+.sidebar{position:fixed;inset:0 auto 0 0;width:var(--sb-w);z-index:30;display:flex;flex-direction:column;background:linear-gradient(180deg,#0d1730,#0a1226);border-right:1px solid var(--line)}
+.sidebar .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:.3px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sidebar nav.menu{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:2px;padding:10px 10px 16px;margin:0;background:none;border:none;border-radius:0}
+.sidebar nav.menu::-webkit-scrollbar{width:6px}
+.sidebar nav.menu::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+/* judul kategori */
+.sidebar .mlabel{font-size:10.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#6f7da6;padding:14px 10px 5px}
+.sidebar .mlabel:first-child{padding-top:4px}
+.sidebar nav.menu button{position:relative;width:100%;border:1px solid transparent;background:transparent;color:var(--mut);padding:9px 11px;border-radius:10px;cursor:pointer;font:inherit;font-weight:600;font-size:13.5px;line-height:1.2;display:flex;align-items:center;gap:11px;white-space:nowrap;text-align:left;transition:background .15s,color .15s,transform .15s}
+.sidebar nav.menu button .ic{font-style:normal;font-size:15px;width:20px;text-align:center;flex:0 0 auto;line-height:1}
+.sidebar nav.menu button:hover{background:#1b2a4d;color:var(--tx)}
+.sidebar nav.menu button:active{transform:translateX(2px)}
+.sidebar nav.menu button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+/* penanda aktif di sisi kiri */
+.sidebar nav.menu button .gl{position:absolute;left:0;top:50%;width:3px;height:0;border-radius:0 3px 3px 0;background:linear-gradient(180deg,var(--acc),var(--acc2));transform:translateY(-50%);transition:height .22s cubic-bezier(.22,.85,.3,1)}
+.sidebar nav.menu button.on{background:linear-gradient(90deg,rgba(56,189,248,.20),rgba(129,140,248,.10));color:#fff;border-color:rgba(56,189,248,.32)}
+.sidebar nav.menu button.on .gl{height:60%}
+.sidebar nav.menu button.on .ic{filter:drop-shadow(0 0 6px rgba(56,189,248,.55))}
+/* kaki sidebar: user + tombol keluar */
+.sidebar .sb-foot{padding:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.sidebar .sb-foot .userchip{justify-content:flex-start;overflow:hidden}
+.sidebar .sb-foot .userchip b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar .sb-foot .navbtn{position:relative;width:100%;border:1px solid transparent;background:transparent;color:#fca5a5;padding:9px 11px;border-radius:10px;cursor:pointer;font:inherit;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:11px;transition:background .15s,color .15s}
+.sidebar .sb-foot .navbtn:hover{background:#5b1d28;color:#fff}
+.sidebar .sb-foot .navbtn .ic{font-style:normal;font-size:15px;width:20px;text-align:center}
+/* tombol hamburger + penutup: hanya untuk layar kecil */
+.sb-toggle,.sb-scrim{display:none}
+.sb-toggle{position:fixed;top:12px;left:12px;z-index:40;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:rgba(13,23,48,.94);color:var(--tx);font-size:19px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.sb-toggle:hover{background:#1b2a4d}
+.sb-scrim{position:fixed;inset:0;z-index:25;background:rgba(6,10,24,.62);backdrop-filter:blur(2px)}
+/* konten digeser ke kanan sebesar sidebar */
+main{max-width:1280px;margin:0 auto;padding:16px 16px 16px calc(var(--sb-w) + 16px)}
+/* logout: sidebar ikut meredup */
+.sidebar{transition:opacity .34s ease,transform .34s ease,filter .34s ease}
+body.byeing .sidebar{opacity:0;transform:translateX(-16px);filter:blur(7px)}
+body.byeing main{opacity:0;transform:translateY(-16px) scale(.985);filter:blur(7px)}
+/* ===== layar kecil: sidebar jadi drawer ===== */
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);transition:transform .26s cubic-bezier(.22,.85,.3,1);box-shadow:0 0 40px rgba(0,0,0,.5)}
+  body.sb-open .sidebar{transform:translateX(0)}
+  body.sb-open .sb-scrim{display:block}
+  .sb-toggle{display:block}
+  main{padding:64px 12px 14px;margin:0}
 }
-@media(max-width:640px){
-  nav.menu{gap:0;padding:2px}
-  nav.menu button{padding:6px 8px;font-size:12px;border-radius:9px}
+@media(max-width:480px){
+  :root{--sb-w:84vw}
+  .sidebar .brand{padding:12px 14px;font-size:16px}
 }
+@media(prefers-reduced-motion:reduce){.sidebar,body.sb-open .sidebar{transition:none}}
 main{max-width:1280px;margin:0 auto;padding:16px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:4px 0 14px}
 .card{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:14px 16px}
@@ -153,8 +178,7 @@ input:focus,select:focus{outline:2px solid var(--acc)}
 .typing::after{content:'\2588';margin-left:2px;color:var(--acc);-webkit-text-fill-color:var(--acc);animation:lfCaret .7s steps(1) infinite}
 @keyframes lfCaret{50%{opacity:0}}
 /* ===== animasi logout: halaman diredupkan + overlay ===== */
-.topbar,main{transition:opacity .34s ease,transform .34s ease,filter .34s ease}
-body.byeing .topbar,body.byeing main{opacity:0;transform:translateY(-16px) scale(.985);filter:blur(7px)}
+/* (transisi sidebar & main didefinisikan pada blok SIDEBAR di atas) */
 .bye{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(8,13,30,.72);backdrop-filter:blur(4px);animation:lfFade .3s ease}
 @keyframes lfFade{from{opacity:0}to{opacity:1}}
 .bye-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 30px;border:1px solid var(--line);
@@ -185,7 +209,7 @@ body.byeing .topbar,body.byeing main{opacity:0;transform:translateY(-16px) scale
 .nf-msg{color:var(--mut);font-size:13.5px;line-height:1.6;margin:0 auto 20px;max-width:44ch}
 .nf-acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 @media (prefers-reduced-motion: reduce){
-  .brand .bl i,.brand .bl,nav.menu button.navbtn,.nf-code,.nf-sig .dot,.bye-box,.bye,.topbar,main{animation:none;transition:none;opacity:1;transform:none;filter:none}
+  .brand .bl i,.brand .bl,nav.menu button.navbtn,.nf-code,.nf-sig .dot,.bye-box,.bye,.sidebar,main{animation:none;transition:none;opacity:1;transform:none;filter:none}
   .nf-card .l-anim{animation:none;opacity:1;filter:none}
   .typing::after{animation:none}
 }
@@ -256,9 +280,8 @@ input.inp{background:#0e1730;border:1px solid var(--line);border-radius:9px;padd
    Foto asli diletakkan di public/img/dash-bg.jpg; bila file dihapus, halaman
    otomatis kembali ke gradient (tanpa request gambar yang gagal).         */
 body.appbg{background-image:linear-gradient(180deg,rgba(8,14,30,.88) 0%,rgba(10,17,36,.55) 26%,rgba(12,20,42,.62) 62%,rgba(15,24,48,.88) 100%),var(--app-bg,none);background-size:cover;background-position:center center;background-repeat:no-repeat;background-attachment:fixed}
-body.appbg .topbar{background:rgba(10,16,34,.92)}
 body.appbg .card,body.appbg .panel{background:rgba(22,33,63,.92);backdrop-filter:blur(3px)}
-body.appbg main{padding-top:14px}
+body.appbg main{padding-top:16px}
 @media(prefers-reduced-motion:no-preference){body.appbg{animation:appbgIn .7s ease both}}
 @keyframes appbgIn{from{opacity:.35}to{opacity:1}}
 @media(max-width:900px){body.appbg{background-attachment:scroll}}
@@ -294,7 +317,7 @@ body.appbg main{padding-top:14px}
 /* ---------- 2. TABLET PORTRAIT (768–1024px) ---------- */
 @media (min-width:768px) and (max-width:1024px){
   main{padding:14px}
-  .topbar{padding:11px 16px;gap:12px}
+  .sidebar .brand{padding:11px 14px;gap:9px}
   .brand{font-size:17px}
   .cards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px}
   .grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:11px}
@@ -308,20 +331,20 @@ body.appbg main{padding-top:14px}
 /* ---------- 3. TABLET & PONSEL UMUM (≤900px) ---------- */
 @media (max-width:900px){
   /* topbar dua baris: brand+userchip di atas, menu penuh di bawah */
-  .topbar{gap:10px;padding:10px 12px}
+  .sidebar .brand{gap:9px;padding:10px 12px}
   .brand{font-size:17px;flex:1 1 auto;min-width:0}
   .brand .bsub{font-size:11px;margin-left:4px}
   .brand .logo{width:30px;height:30px;border-radius:9px;font-size:15px}
   .userchip{margin-left:auto;padding:5px 10px;font-size:12px;flex:0 0 auto}
 
-  /* menu: baris penuh yang digeser mendatar, tidak memaksa wrap */
-  nav.menu{margin-left:0;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;
-    padding-bottom:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  nav.menu::-webkit-scrollbar{display:none}
-  nav.menu button{flex:0 0 auto;padding:9px 14px;font-size:13px;white-space:nowrap;
-    min-height:40px;touch-action:manipulation}
+  /* sidebar jadi drawer: tombol tetap vertikal, target sentuh lebih besar */
+  .sidebar .brand{flex:0 0 auto}
+  .sidebar nav.menu{padding:8px 8px 14px}
+  .sidebar nav.menu button{min-height:44px;padding:11px 12px;font-size:14px;touch-action:manipulation}
+  .sidebar .sb-foot .navbtn{min-height:44px}
+  .sidebar .mlabel{padding:12px 10px 4px}
 
-  main{max-width:100%;padding:12px 10px calc(18px + env(safe-area-inset-bottom))}
+  main{max-width:100%;padding:62px 10px calc(18px + env(safe-area-inset-bottom))}
   .panel{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
   .cards{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
@@ -338,17 +361,17 @@ body.appbg main{padding-top:14px}
 
 /* ---------- 4. PONSEL (≤640px) ---------- */
 @media (max-width:640px){
-  .topbar{padding:9px 10px;gap:8px}
+  .sidebar .brand{gap:8px;padding:9px 10px}
   .brand{font-size:15.5px;gap:8px}
   .brand .logo{width:27px;height:27px;border-radius:8px;font-size:14px}
   .brand .bsub{font-size:10px;margin-left:2px}
   .userchip{font-size:11px;padding:4px 9px;gap:6px}
   .userchip .dot{width:7px;height:7px}
   .role{font-size:9.5px;padding:2px 6px}
-  nav.menu{gap:5px}
-  nav.menu button{padding:8px 12px;font-size:12.5px;min-height:38px}
+  .sidebar nav.menu{gap:2px;padding:6px 6px 12px}
+  .sidebar nav.menu button{padding:10px 11px;font-size:13.5px;min-height:44px}
 
-  main{padding:10px 8px calc(16px + env(safe-area-inset-bottom))}
+  main{padding:62px 8px calc(16px + env(safe-area-inset-bottom))}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .card{padding:11px 12px;border-radius:13px}
   .card small{font-size:9.5px;letter-spacing:.4px}
@@ -437,8 +460,8 @@ body.appbg main{padding-top:14px}
 
 /* ---------- 7. NOTCH / SAFE AREA (iPhone & Android ber-notch) ---------- */
 @supports (padding:max(0px)){
-  .topbar{padding-top:calc(10px + env(safe-area-inset-top))}
-  .topbar{padding-left:calc(12px + env(safe-area-inset-left));
+  .sidebar{padding-top:env(safe-area-inset-top)}
+  .sidebar .brand{padding-left:calc(12px + env(safe-area-inset-left));
           padding-right:calc(12px + env(safe-area-inset-right))}
   main{padding-left:calc(10px + env(safe-area-inset-left));
        padding-right:calc(10px + env(safe-area-inset-right))}
@@ -454,7 +477,7 @@ body.appbg main{padding-top:14px}
   .grid,.cards,.speedgrid{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
   .grid>*,.cards>*,.speedgrid>*{min-width:0}
   .panel{min-width:0;max-width:100%}
-  .topbar{min-width:0;max-width:100vw}
+  .sidebar{min-width:0;max-width:100vw}
   .brand,.userchip{min-width:0}
   .brand .bl,.brand .bsub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .userchip{flex:0 1 auto;overflow:hidden}

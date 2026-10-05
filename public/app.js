@@ -76,31 +76,66 @@ function brandLetters(txt) { return Array.from(txt).map((c, i) => '<i style="--i
 function shell(inner, active) {
   const isA = U.role === 'admin' || U.role === 'superadmin', isO = U.role === 'operator' || isA;
   let ni = 0;
-  const btn = (id, label, title) => '<button data-v="' + id + '" title="' + title + '" aria-label="' + title + '" aria-current="' + (active === id ? 'page' : 'false') + '" class="navbtn' + (active === id ? ' on' : '') + '" style="--i:' + (ni++ * .035).toFixed(3) + 's" onclick="go(\'' + id + '\')">' + label + '<i class="gl" aria-hidden="true"></i></button>';
-  const sep = '<span class="msep" aria-hidden="true"></span>';
-  // Tombol dikelompokkan agar tidak meluber jadi satu baris panjang.
-  const grup = [
-    btn('dash', '&#128202; Dashboard', 'Ringkasan kondisi jaringan'),
-    btn('live', '&#128994; Live', 'Traffic realtime'),
-    btn('topo', '&#127760; Topologi', 'Peta topologi jaringan'),
-    btn('dev', '&#128752; Devices', 'Daftar perangkat'),
-  ].join('') + sep + [
-    btn('wifi', '&#128246; Kanal WiFi', 'Analisis kanal WiFi 2.4 &amp; 5 GHz'),
-    btn('net', '&#129517; Diagnostik', 'Ping, traceroute, route print, speedtest'),
-  ].join('') + (isO ? btn('disc', '&#128269; Discovery', 'Pindai perangkat di jaringan') : '') + sep + [
-    btn('alerts', '&#128276; Alerts', 'Insiden &amp; notifikasi'),
-    btn('events', '&#128221; Events', 'Syslog &amp; riwayat'),
-    btn('flow', '&#8646; Flows', 'Arus trafik'),
-    btn('rep', '&#128203; Laporan', 'Ringkasan laporan'),
-    btn('sla', '&#9989; SLA', 'Uptime &amp; SLA'),
-  ].join('');
-  const grupTambahan =
-    (isA ? sep + [btn('users', '&#128100; Users', 'Kelola pengguna'), btn('chan', '&#128225; Channels', 'Saluran notifikasi')].join('') : '');
-  const nav = grup + grupTambahan;
-  return '<header class="topbar"><div class="brand"><span class="logo">N</span><span class="bl">' + brandLetters('NMS') + '<span class="bsub">Monitoring</span></span></div>'
+  const btn = (id, label, title) => '<button data-v="' + id + '" title="' + title + '" aria-label="' + title + '" aria-current="' + (active === id ? 'page' : 'false') + '" class="navbtn' + (active === id ? ' on' : '') + '" style="--i:' + (ni++ * .035).toFixed(3) + 's" onclick="navPick(\'' + id + '\')">' + label + '<i class="gl" aria-hidden="true"></i></button>';
+  const lbl = (t) => '<div class="mlabel">' + t + '</div>';
+  // Sidebar: dikelompokkan per kategori agar mudah dipindai.
+  const nav =
+    lbl('Monitoring') +
+    btn('dash', '<b class="ic">&#128202;</b><span>Dashboard</span>', 'Ringkasan kondisi jaringan') +
+    btn('live', '<b class="ic">&#128994;</b><span>Live Traffic</span>', 'Traffic realtime') +
+    btn('topo', '<b class="ic">&#127760;</b><span>Topologi</span>', 'Peta topologi jaringan') +
+    btn('dev', '<b class="ic">&#128752;</b><span>Devices</span>', 'Daftar perangkat') +
+    lbl('Alat Jaringan') +
+    btn('wifi', '<b class="ic">&#128246;</b><span>Kanal WiFi</span>', 'Analisis kanal WiFi 2.4 &amp; 5 GHz') +
+    btn('net', '<b class="ic">&#129517;</b><span>Diagnostik</span>', 'Ping, traceroute, route print, speedtest') +
+    (isO ? btn('disc', '<b class="ic">&#128269;</b><span>Discovery</span>', 'Pindai perangkat di jaringan') : '') +
+    lbl('Laporan') +
+    btn('alerts', '<b class="ic">&#128276;</b><span>Alerts</span>', 'Insiden &amp; notifikasi') +
+    btn('events', '<b class="ic">&#128221;</b><span>Events</span>', 'Syslog &amp; riwayat') +
+    btn('flow', '<b class="ic">&#8646;</b><span>Flows</span>', 'Arus trafik') +
+    btn('rep', '<b class="ic">&#128203;</b><span>Laporan</span>', 'Ringkasan laporan') +
+    btn('sla', '<b class="ic">&#9989;</b><span>SLA</span>', 'Uptime &amp; SLA') +
+    (isA ? lbl('Administrasi') +
+      btn('users', '<b class="ic">&#128100;</b><span>Users</span>', 'Kelola pengguna') +
+      btn('chan', '<b class="ic">&#128225;</b><span>Channels</span>', 'Saluran notifikasi') : '');
+  return '<button class="sb-toggle" id="sbToggle" aria-label="Buka / tutup menu" title="Buka / tutup menu">&#9776;</button>'
+    + '<div class="sb-scrim" id="sbScrim" aria-hidden="true"></div>'
+    + '<aside class="sidebar" id="sidebar">'
+    + '<div class="brand"><span class="logo">N</span><span class="bl">' + brandLetters('NMS') + '<span class="bsub">Monitoring</span></span></div>'
+    + '<nav class="menu" role="navigation">' + nav + '</nav>'
+    + '<div class="sb-foot">'
     + '<div class="userchip"><span class="dot"></span><b>' + esc(U.username) + '</b><span class="role">' + esc(U.role) + '</span></div>'
-    + '<nav class="menu" role="navigation">' + nav + '<span class="msep" aria-hidden="true"></span><button class="danger navbtn" title="Keluar dari aplikasi" aria-label="Keluar" style="--i:' + (ni * .035).toFixed(3) + 's" onclick="logout()">&#9166; Keluar</button></nav></header><main><div id="c">' + inner + '</div></main>';
+    + '<button class="navbtn danger" title="Keluar dari aplikasi" aria-label="Keluar" onclick="logout()"><b class="ic">&#9166;</b><span>Keluar</span></button>'
+    + '</div></aside>'
+    + '<main><div id="c">' + inner + '</div></main>';
 }
+// Pilih menu: tutup sidebar di layar kecil lalu buka halaman
+function navPick(v) {
+  closeSidebar();
+  go(v);
+}
+function openSidebar() {
+  document.body.classList.add('sb-open');
+  const t = document.getElementById('sbToggle');
+  if (t) t.setAttribute('aria-expanded', 'true');
+}
+function closeSidebar() {
+  document.body.classList.remove('sb-open');
+  const t = document.getElementById('sbToggle');
+  if (t) t.setAttribute('aria-expanded', 'false');
+}
+function toggleSidebar() {
+  document.body.classList.contains('sb-open') ? closeSidebar() : openSidebar();
+}
+// pasang tombol toggle + tutup sidebar saat pindah halaman / tekan Escape
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (e) => {
+    const t = document.getElementById('sbToggle');
+    if (t && t.contains(e.target)) { toggleSidebar(); return; }
+    if (e.target && e.target.id === 'sbScrim') closeSidebar();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
+});
 const DEMO_ACCOUNTS = [['superadmin', 'superadmin123'], ['admin', 'admin123'], ['operator', 'operator123'], ['viewer', 'viewer123']];
 function loginHtml() {
   return `<div id="loginWrap">
