@@ -7,8 +7,10 @@
 const { execSync } = require('node:child_process');
 
 function ghToken() {
-  const out = execSync('echo protocol=https& echo host=github.com& echo.& git credential fill',
-    { shell: 'cmd.exe', encoding: 'utf8' });
+  const out = execSync('git credential fill', {
+    input: 'protocol=https\nhost=github.com\n\n',
+    encoding: 'utf8',
+  });
   const m = out.match(/password=(.*)/);
   if (!m) throw new Error('Credential GitHub tidak ditemukan di git credential helper');
   return m[1].trim();
