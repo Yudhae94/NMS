@@ -76,13 +76,30 @@ function brandLetters(txt) { return Array.from(txt).map((c, i) => '<i style="--i
 function shell(inner, active) {
   const isA = U.role === 'admin' || U.role === 'superadmin', isO = U.role === 'operator' || isA;
   let ni = 0;
-  const btn = (id, label) => '<button data-v="' + id + '" class="navbtn ' + (active === id ? 'on' : '') + '" style="--i:' + (ni++ * .045).toFixed(3) + 's" onclick="go(\'' + id + '\')">' + label + '</button>';
-  let nav = btn('dash', '&#128202; Dashboard') + btn('live', '&#128994; Live Traffic') + btn('dev', '&#128752; Devices') + btn('topo', '&#127760; Topologi') + btn('wifi', '&#128246; Kanal WiFi') + btn('net', '&#129517; Diagnostik') + btn('alerts', '&#128276; Alerts') + btn('events', '&#128221; Events') + btn('flow', '&#8646; Flows') + btn('rep', '&#128203; Laporan') + btn('sla', '&#9989; SLA');
-  if (isA) nav += btn('users', '&#128100; Users') + btn('chan', '&#128225; Channels');
-  if (isO) nav += btn('disc', '&#128269; Discovery');
+  const btn = (id, label, title) => '<button data-v="' + id + '" title="' + title + '" aria-label="' + title + '" aria-current="' + (active === id ? 'page' : 'false') + '" class="navbtn' + (active === id ? ' on' : '') + '" style="--i:' + (ni++ * .035).toFixed(3) + 's" onclick="go(\'' + id + '\')">' + label + '<i class="gl" aria-hidden="true"></i></button>';
+  const sep = '<span class="msep" aria-hidden="true"></span>';
+  // Tombol dikelompokkan agar tidak meluber jadi satu baris panjang.
+  const grup = [
+    btn('dash', '&#128202; Dashboard', 'Ringkasan kondisi jaringan'),
+    btn('live', '&#128994; Live', 'Traffic realtime'),
+    btn('topo', '&#127760; Topologi', 'Peta topologi jaringan'),
+    btn('dev', '&#128752; Devices', 'Daftar perangkat'),
+  ].join('') + sep + [
+    btn('wifi', '&#128246; Kanal WiFi', 'Analisis kanal WiFi 2.4 &amp; 5 GHz'),
+    btn('net', '&#129517; Diagnostik', 'Ping, traceroute, route print, speedtest'),
+  ].join('') + (isO ? btn('disc', '&#128269; Discovery', 'Pindai perangkat di jaringan') : '') + sep + [
+    btn('alerts', '&#128276; Alerts', 'Insiden &amp; notifikasi'),
+    btn('events', '&#128221; Events', 'Syslog &amp; riwayat'),
+    btn('flow', '&#8646; Flows', 'Arus trafik'),
+    btn('rep', '&#128203; Laporan', 'Ringkasan laporan'),
+    btn('sla', '&#9989; SLA', 'Uptime &amp; SLA'),
+  ].join('');
+  const grupTambahan =
+    (isA ? sep + [btn('users', '&#128100; Users', 'Kelola pengguna'), btn('chan', '&#128225; Channels', 'Saluran notifikasi')].join('') : '');
+  const nav = grup + grupTambahan;
   return '<header class="topbar"><div class="brand"><span class="logo">N</span><span class="bl">' + brandLetters('NMS') + '<span class="bsub">Monitoring</span></span></div>'
     + '<div class="userchip"><span class="dot"></span><b>' + esc(U.username) + '</b><span class="role">' + esc(U.role) + '</span></div>'
-    + '<nav class="menu">' + nav + '<button class="danger navbtn" style="--i:' + (ni * .045).toFixed(3) + 's" onclick="logout()">&#9166; Keluar</button></nav></header><main><div id="c">' + inner + '</div></main>';
+    + '<nav class="menu" role="navigation">' + nav + '<span class="msep" aria-hidden="true"></span><button class="danger navbtn" title="Keluar dari aplikasi" aria-label="Keluar" style="--i:' + (ni * .035).toFixed(3) + 's" onclick="logout()">&#9166; Keluar</button></nav></header><main><div id="c">' + inner + '</div></main>';
 }
 const DEMO_ACCOUNTS = [['superadmin', 'superadmin123'], ['admin', 'admin123'], ['operator', 'operator123'], ['viewer', 'viewer123']];
 function loginHtml() {

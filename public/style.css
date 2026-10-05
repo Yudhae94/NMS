@@ -18,11 +18,31 @@ nav.menu button.navbtn{animation:lfNav .42s cubic-bezier(.22,.85,.3,1) backwards
 .userchip{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#0e1730;font-size:13px}
 .userchip .dot{width:9px;height:9px;border-radius:50%;background:var(--up)}
 .role{font-size:11px;padding:2px 8px;border-radius:999px;background:#24346b;color:#cdd8ff;text-transform:uppercase}
-nav.menu{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
-nav.menu button{border:1px solid transparent;background:transparent;color:var(--tx);padding:8px 13px;border-radius:10px;cursor:pointer;font-weight:600}
-nav.menu button:hover{background:#22305c}
-nav.menu button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#06121f}
-nav.menu button.danger:hover{background:#5b1d28}
+/* ===== menu navigasi: rapi, tergrup, responsif ===== */
+nav.menu{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin-left:auto;padding:3px;border-radius:14px;background:rgba(8,14,30,.5);border:1px solid var(--line)}
+nav.menu button{position:relative;border:1px solid transparent;background:transparent;color:var(--mut);padding:7px 12px;border-radius:11px;cursor:pointer;font:inherit;font-weight:600;font-size:13px;line-height:1.2;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background .16s,color .16s,border-color .16s,transform .16s}
+nav.menu button:hover{background:#22305c;color:var(--tx)}
+nav.menu button:active{transform:translateY(1px)}
+nav.menu button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* garis penanda tombol aktif di bawah */
+nav.menu button .gl{position:absolute;left:50%;bottom:3px;width:0;height:2px;border-radius:2px;background:var(--acc);transform:translateX(-50%);transition:width .22s cubic-bezier(.22,.85,.3,1)}
+nav.menu button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#06121f;border-color:transparent;box-shadow:0 4px 14px rgba(56,189,248,.25)}
+nav.menu button.on:hover{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#06121f}
+nav.menu button.on .gl{width:26px;background:rgba(6,18,31,.55)}
+/* pemisah antar kelompok menu */
+nav.menu .msep{width:1px;height:20px;background:var(--line);margin:0 5px;flex:0 0 auto}
+nav.menu button.danger{color:#fca5a5}
+nav.menu button.danger:hover{background:#5b1d28;color:#fff}
+/* di layar sempit: tombol lebih rapat, pemisah disembunyikan */
+@media(max-width:1180px){
+  nav.menu{width:100%;margin-left:0;justify-content:flex-start}
+  nav.menu .msep{display:none}
+  nav.menu button{padding:6px 10px;font-size:12.5px}
+}
+@media(max-width:640px){
+  nav.menu{gap:0;padding:2px}
+  nav.menu button{padding:6px 8px;font-size:12px;border-radius:9px}
+}
 main{max-width:1280px;margin:0 auto;padding:16px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:4px 0 14px}
 .card{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:14px 16px}
