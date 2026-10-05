@@ -30,3 +30,13 @@ README.md
 # cache browser Chrome/Edge dipakai skrip QA otomatis (jangan di-commit)
 .chrome-qa*/
 
+# cache/state lokal Cloudflare Wrangler
+.wrangler/
+
+# harness QA sementara (one-off)
+public/_topo-qa.html
+scripts/_topo-*.js
+scripts/_topo-*.mjs
+scripts/_fail-test.js
+scripts/_inspect.js
+
